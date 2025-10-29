@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { signIn, signUp } from "@/lib/supabase";
+import { passwordSchema } from "@/lib/validation";
 
 export const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,6 +16,20 @@ export const AuthForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate password for signup
+    if (!isLogin) {
+      const validation = passwordSchema.safeParse(password);
+      if (!validation.success) {
+        toast({
+          title: "Invalid password",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     setLoading(true);
 
     try {
@@ -35,8 +50,8 @@ export const AuthForm = () => {
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "Something went wrong",
+        title: "Authentication error",
+        description: "Unable to complete authentication. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -79,8 +94,13 @@ export const AuthForm = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
+              {!isLogin && (
+                <p className="text-xs text-muted-foreground">
+                  Password must be at least 8 characters with uppercase, lowercase, number, and special character
+                </p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Loading..." : isLogin ? "Sign In" : "Sign Up"}

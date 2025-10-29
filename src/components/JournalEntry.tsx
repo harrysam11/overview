@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { BookOpen } from "lucide-react";
+import { journalContentSchema } from "@/lib/validation";
+import { useToast } from "@/hooks/use-toast";
 
 interface JournalEntryProps {
   date: Date;
@@ -13,6 +15,7 @@ interface JournalEntryProps {
 export const JournalEntry = ({ date, content, onSave }: JournalEntryProps) => {
   const [text, setText] = useState(content);
   const [hasChanges, setHasChanges] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     setText(content);
@@ -25,7 +28,17 @@ export const JournalEntry = ({ date, content, onSave }: JournalEntryProps) => {
   };
 
   const handleSave = () => {
-    onSave(text);
+    const validation = journalContentSchema.safeParse(text);
+    if (!validation.success) {
+      toast({
+        title: "Invalid journal entry",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    onSave(validation.data);
     setHasChanges(false);
   };
 
