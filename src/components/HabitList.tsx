@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { habitNameSchema } from "@/lib/validation";
+import { useToast } from "@/hooks/use-toast";
 
 interface Habit {
   id: string;
@@ -29,15 +31,26 @@ export const HabitList = ({
 }: HabitListProps) => {
   const [newHabitName, setNewHabitName] = useState("");
   const [habitType, setHabitType] = useState<"do" | "dont">("do");
+  const { toast } = useToast();
 
   const dos = habits.filter((h) => h.type === "do" && h.is_active);
   const donts = habits.filter((h) => h.type === "dont" && h.is_active);
 
   const handleAddHabit = () => {
-    if (newHabitName.trim()) {
-      onAddHabit(newHabitName.trim(), habitType);
-      setNewHabitName("");
+    const trimmedName = newHabitName.trim();
+    
+    const validation = habitNameSchema.safeParse(trimmedName);
+    if (!validation.success) {
+      toast({
+        title: "Invalid habit name",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
     }
+    
+    onAddHabit(validation.data, habitType);
+    setNewHabitName("");
   };
 
   return (

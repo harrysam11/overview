@@ -52,8 +52,7 @@ const Dashboard = () => {
       setHabits((habitsData as Habit[]) || []);
     } catch (error: any) {
       toast({
-        title: "Error loading data",
-        description: error.message,
+        description: "Failed to load habits. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -88,7 +87,10 @@ const Dashboard = () => {
       if (journalError) throw journalError;
       setJournalContent(journalData?.content || "");
     } catch (error: any) {
-      console.error("Error loading daily data:", error);
+      toast({
+        description: "Failed to load daily data. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -122,8 +124,7 @@ const Dashboard = () => {
       setCompletedHabits(newCompleted);
     } catch (error: any) {
       toast({
-        title: "Error updating habit",
-        description: error.message,
+        description: "Failed to update habit. Please try again.",
         variant: "destructive",
       });
     }
@@ -145,8 +146,7 @@ const Dashboard = () => {
       toast({ title: "Habit added successfully!" });
     } catch (error: any) {
       toast({
-        title: "Error adding habit",
-        description: error.message,
+        description: "Failed to add habit. Please try again.",
         variant: "destructive",
       });
     }
@@ -164,8 +164,7 @@ const Dashboard = () => {
       toast({ title: "Habit deleted successfully!" });
     } catch (error: any) {
       toast({
-        title: "Error deleting habit",
-        description: error.message,
+        description: "Failed to delete habit. Please try again.",
         variant: "destructive",
       });
     }
@@ -192,8 +191,7 @@ const Dashboard = () => {
       toast({ title: "Journal saved successfully!" });
     } catch (error: any) {
       toast({
-        title: "Error saving journal",
-        description: error.message,
+        description: "Failed to save journal entry. Please try again.",
         variant: "destructive",
       });
     }
