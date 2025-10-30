@@ -254,7 +254,8 @@ const Dashboard = () => {
       if (habit.type === "do") {
         if (record?.completed) points += 1;
       } else {
-        if (record?.completed) points += 1;
+        // For "dont" habits, a point is earned when the habit was avoided (i.e., not completed)
+        if (record && !record.completed) points += 1;
       }
     });
     
@@ -274,8 +275,7 @@ const Dashboard = () => {
     
     if (percentage >= 80) return "success";
     if (percentage >= 60) return "warning";
-    if (points > 0) return "failure";
-    return "neutral";
+    return "failure";
   };
 
   const handleSignOut = async () => {

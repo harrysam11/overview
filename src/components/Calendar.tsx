@@ -55,7 +55,7 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus, getDayPoints 
                 !isCurrentMonth && "opacity-40",
                 isCurrent && "ring-2 ring-primary ring-offset-2",
                 status === "success" && "bg-success text-success-foreground hover:bg-success/90",
-                status === "warning" && "bg-yellow-500 text-yellow-950 hover:bg-yellow-500/90",
+                status === "warning" && "bg-accent text-accent-foreground hover:bg-accent/90",
                 status === "failure" && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
                 status === "neutral" && "bg-muted hover:bg-muted/80 text-foreground"
               )}
