@@ -261,9 +261,15 @@ const Dashboard = () => {
 
   const getDayStatus = (date: Date): "success" | "failure" | "neutral" | "warning" => {
     if (isToday(date)) return "neutral";
+    
+    const maxPoints = habits.length + 2; // Each habit = 1 point, journal = 2 points
+    if (maxPoints === 0) return "neutral";
+    
     const points = calculateDayPoints(date);
-    if (points >= 8) return "success";
-    if (points >= 6) return "warning";
+    const percentage = (points / maxPoints) * 100;
+    
+    if (percentage >= 80) return "success";
+    if (percentage >= 60) return "warning";
     if (points > 0) return "failure";
     return "neutral";
   };
