@@ -259,10 +259,12 @@ const Dashboard = () => {
     return points;
   };
 
-  const getDayStatus = (date: Date): "success" | "failure" | "neutral" => {
+  const getDayStatus = (date: Date): "success" | "failure" | "neutral" | "warning" => {
     if (isToday(date)) return "neutral";
     const points = calculateDayPoints(date);
     if (points >= 8) return "success";
+    if (points >= 6) return "warning";
+    if (points > 0) return "failure";
     return "neutral";
   };
 

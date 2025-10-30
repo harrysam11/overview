@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 interface CalendarProps {
   currentDate: Date;
   onDateClick: (date: Date) => void;
-  getDayStatus: (date: Date) => "success" | "failure" | "neutral";
+  getDayStatus: (date: Date) => "success" | "failure" | "neutral" | "warning";
   getDayPoints: (date: Date) => number;
 }
 
@@ -55,6 +55,7 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus, getDayPoints 
                 !isCurrentMonth && "opacity-40",
                 isCurrent && "ring-2 ring-primary ring-offset-2",
                 status === "success" && "bg-success text-success-foreground hover:bg-success/90",
+                status === "warning" && "bg-yellow-500 text-yellow-950 hover:bg-yellow-500/90",
                 status === "failure" && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
                 status === "neutral" && "bg-muted hover:bg-muted/80 text-foreground"
               )}
