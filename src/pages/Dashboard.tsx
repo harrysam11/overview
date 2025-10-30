@@ -97,7 +97,11 @@ const Dashboard = () => {
       (journalData || []).forEach((j) => journalMap.set(j.entry_date, true));
       setMonthJournals(journalMap);
     } catch (error: any) {
-      console.error("Failed to load month data:", error);
+      toast({
+        title: "Error loading data",
+        description: "Failed to load monthly records. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
