@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from "date-fns";
 import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -260,10 +260,10 @@ const Dashboard = () => {
   };
 
   const getDayStatus = (date: Date): "success" | "failure" | "neutral" => {
+    if (isToday(date)) return "neutral";
     const points = calculateDayPoints(date);
     if (points >= 8) return "success";
-    if (points >= 4) return "neutral";
-    return "failure";
+    return "neutral";
   };
 
   const handleSignOut = async () => {
