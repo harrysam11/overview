@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { format, startOfMonth, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,12 @@ interface Habit {
 interface DailyRecord {
   habit_id: string;
   completed: boolean;
+  record_date: string;
+}
+
+interface DayPoints {
+  points: number;
+  hasJournal: boolean;
 }
 
 const Dashboard = () => {
@@ -27,6 +33,8 @@ const Dashboard = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [habits, setHabits] = useState<Habit[]>([]);
   const [dailyRecords, setDailyRecords] = useState<Map<string, DailyRecord[]>>(new Map());
+  const [monthRecords, setMonthRecords] = useState<DailyRecord[]>([]);
+  const [monthJournals, setMonthJournals] = useState<Map<string, boolean>>(new Map());
   const [completedHabits, setCompletedHabits] = useState<Set<string>>(new Set());
   const [journalContent, setJournalContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -35,6 +43,10 @@ const Dashboard = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    loadMonthData(currentMonth);
+  }, [currentMonth, habits]);
 
   useEffect(() => {
     loadDailyData(selectedDate);
@@ -57,6 +69,35 @@ const Dashboard = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMonthData = async (date: Date) => {
+    try {
+      const monthStart = format(startOfMonth(date), "yyyy-MM-dd");
+      const monthEnd = format(endOfMonth(date), "yyyy-MM-dd");
+
+      const { data: recordsData, error: recordsError } = await supabase
+        .from("daily_records")
+        .select("*")
+        .gte("record_date", monthStart)
+        .lte("record_date", monthEnd);
+
+      if (recordsError) throw recordsError;
+      setMonthRecords(recordsData || []);
+
+      const { data: journalData, error: journalError } = await supabase
+        .from("journal_entries")
+        .select("entry_date")
+        .gte("entry_date", monthStart)
+        .lte("entry_date", monthEnd);
+
+      if (journalError) throw journalError;
+      const journalMap = new Map();
+      (journalData || []).forEach((j) => journalMap.set(j.entry_date, true));
+      setMonthJournals(journalMap);
+    } catch (error: any) {
+      console.error("Failed to load month data:", error);
     }
   };
 
@@ -197,10 +238,32 @@ const Dashboard = () => {
     }
   };
 
-  const getDayStatus = (date: Date): "success" | "failure" | "neutral" => {
+  const calculateDayPoints = (date: Date): number => {
     const dateStr = format(date, "yyyy-MM-dd");
-    // Simplified status - you can enhance this later
-    return "neutral";
+    const dayRecords = monthRecords.filter((r) => r.record_date === dateStr);
+    const hasJournal = monthJournals.has(dateStr);
+    
+    let points = 0;
+    
+    habits.forEach((habit) => {
+      const record = dayRecords.find((r) => r.habit_id === habit.id);
+      if (habit.type === "do") {
+        if (record?.completed) points += 1;
+      } else {
+        if (record?.completed) points += 1;
+      }
+    });
+    
+    if (hasJournal) points += 2;
+    
+    return points;
+  };
+
+  const getDayStatus = (date: Date): "success" | "failure" | "neutral" => {
+    const points = calculateDayPoints(date);
+    if (points >= 8) return "success";
+    if (points >= 4) return "neutral";
+    return "failure";
   };
 
   const handleSignOut = async () => {
@@ -209,14 +272,17 @@ const Dashboard = () => {
   };
 
   const calculatePoints = () => {
-    const dos = habits.filter((h) => h.type === "do");
-    const donts = habits.filter((h) => h.type === "dont");
+    let points = 0;
     
-    const completedDos = dos.filter((h) => completedHabits.has(h.id)).length;
-    const avoidedDonts = donts.filter((h) => !completedHabits.has(h.id)).length;
-    const journalPoints = journalContent ? 2 : 0;
+    habits.forEach((habit) => {
+      if (completedHabits.has(habit.id)) {
+        points += 1;
+      }
+    });
     
-    return (completedDos * 4) + (avoidedDonts * 4) + journalPoints;
+    if (journalContent) points += 2;
+    
+    return points;
   };
 
   if (loading) {
@@ -274,6 +340,7 @@ const Dashboard = () => {
                   currentDate={currentMonth}
                   onDateClick={setSelectedDate}
                   getDayStatus={getDayStatus}
+                  getDayPoints={calculateDayPoints}
                 />
               </CardContent>
             </Card>
@@ -290,16 +357,15 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex justify-between">
-                  <span>Completed Do's:</span>
-                  <span>+{habits.filter((h) => h.type === "do" && completedHabits.has(h.id)).length * 4}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Avoided Don'ts:</span>
-                  <span>+{habits.filter((h) => h.type === "dont" && !completedHabits.has(h.id)).length * 4}</span>
+                  <span>Completed Habits:</span>
+                  <span>+{Array.from(completedHabits).length * 1}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Journal Entry:</span>
                   <span>+{journalContent ? 2 : 0}</span>
+                </div>
+                <div className="text-xs mt-2 opacity-70">
+                  Each habit = 1 point • Journal = 2 points
                 </div>
               </CardContent>
             </Card>

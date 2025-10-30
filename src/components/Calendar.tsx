@@ -6,9 +6,10 @@ interface CalendarProps {
   currentDate: Date;
   onDateClick: (date: Date) => void;
   getDayStatus: (date: Date) => "success" | "failure" | "neutral";
+  getDayPoints: (date: Date) => number;
 }
 
-export const Calendar = ({ currentDate, onDateClick, getDayStatus }: CalendarProps) => {
+export const Calendar = ({ currentDate, onDateClick, getDayStatus, getDayPoints }: CalendarProps) => {
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   
@@ -40,6 +41,7 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus }: CalendarPro
           }
 
           const status = getDayStatus(day);
+          const points = getDayPoints(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isCurrent = isToday(day);
 
@@ -48,8 +50,8 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus }: CalendarPro
               key={day.toISOString()}
               onClick={() => onDateClick(day)}
               className={cn(
-                "aspect-square rounded-lg p-2 text-sm font-medium transition-all hover:scale-105",
-                "flex items-center justify-center relative",
+                "aspect-square rounded-lg p-1 text-sm font-medium transition-all hover:scale-105",
+                "flex flex-col items-center justify-center relative gap-0.5",
                 !isCurrentMonth && "opacity-40",
                 isCurrent && "ring-2 ring-primary ring-offset-2",
                 status === "success" && "bg-success text-success-foreground hover:bg-success/90",
@@ -57,7 +59,10 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus }: CalendarPro
                 status === "neutral" && "bg-muted hover:bg-muted/80 text-foreground"
               )}
             >
-              {format(day, "d")}
+              <span>{format(day, "d")}</span>
+              {points > 0 && (
+                <span className="text-[10px] font-bold opacity-90">{points}p</span>
+              )}
             </button>
           );
         })}
