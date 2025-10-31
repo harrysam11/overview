@@ -116,6 +116,44 @@ const Dashboard = () => {
 
       if (recordsError) throw recordsError;
 
+      // Auto-create records for "dont" habits with completed=true if they don't exist
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && habits.length > 0) {
+        const existingHabitIds = new Set((recordsData || []).map(r => r.habit_id));
+        const dontHabits = habits.filter(h => h.type === "dont" && !existingHabitIds.has(h.id));
+        
+        if (dontHabits.length > 0) {
+          const newRecords = dontHabits.map(habit => ({
+            user_id: user.id,
+            record_date: dateStr,
+            habit_id: habit.id,
+            completed: true
+          }));
+          
+          const { error: insertError } = await supabase
+            .from("daily_records")
+            .insert(newRecords);
+          
+          if (!insertError) {
+            // Reload records to include newly created ones
+            const { data: updatedRecords } = await supabase
+              .from("daily_records")
+              .select("*")
+              .eq("record_date", dateStr);
+            
+            if (updatedRecords) {
+              const completed = new Set(
+                updatedRecords
+                  .filter((r) => r.completed)
+                  .map((r) => r.habit_id)
+              );
+              setCompletedHabits(completed);
+              return;
+            }
+          }
+        }
+      }
+
       const completed = new Set(
         (recordsData || [])
           .filter((r) => r.completed)
