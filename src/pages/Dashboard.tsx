@@ -287,8 +287,15 @@ const Dashboard = () => {
     let points = 0;
     
     habits.forEach((habit) => {
-      if (completedHabits.has(habit.id)) {
-        points += 1;
+      if (habit.type === "do") {
+        if (completedHabits.has(habit.id)) {
+          points += 1;
+        }
+      } else {
+        // For "dont" habits, points are earned when NOT completed
+        if (!completedHabits.has(habit.id)) {
+          points += 1;
+        }
       }
     });
     
