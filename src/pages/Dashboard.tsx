@@ -253,6 +253,25 @@ const Dashboard = () => {
     }
   };
 
+  const handleUpdateHabitNotes = async (habitId: string, notes: string) => {
+    try {
+      const { error } = await supabase
+        .from("habits")
+        .update({ notes })
+        .eq("id", habitId);
+
+      if (error) throw error;
+      
+      setHabits(habits.map((h) => h.id === habitId ? { ...h, notes } : h));
+      toast({ title: "Notes saved successfully!" });
+    } catch (error: any) {
+      toast({
+        description: "Failed to save notes. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSaveJournal = async (content: string) => {
     try {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -441,6 +460,7 @@ const Dashboard = () => {
               onToggleHabit={handleToggleHabit}
               onAddHabit={handleAddHabit}
               onDeleteHabit={handleDeleteHabit}
+              onUpdateHabitNotes={handleUpdateHabitNotes}
             />
 
             <JournalEntry

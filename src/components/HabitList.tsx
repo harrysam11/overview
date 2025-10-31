@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Check, X, Plus, Trash2 } from "lucide-react";
+import { Check, X, Plus, Trash2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { habitNameSchema } from "@/lib/validation";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +14,7 @@ interface Habit {
   name: string;
   type: "do" | "dont";
   is_active: boolean;
+  notes?: string | null;
 }
 
 interface HabitListProps {
@@ -20,6 +23,7 @@ interface HabitListProps {
   onToggleHabit: (habitId: string) => void;
   onAddHabit: (name: string, type: "do" | "dont") => void;
   onDeleteHabit: (habitId: string) => void;
+  onUpdateHabitNotes: (habitId: string, notes: string) => void;
 }
 
 export const HabitList = ({
@@ -28,10 +32,29 @@ export const HabitList = ({
   onToggleHabit,
   onAddHabit,
   onDeleteHabit,
+  onUpdateHabitNotes,
 }: HabitListProps) => {
   const [newHabitName, setNewHabitName] = useState("");
   const [habitType, setHabitType] = useState<"do" | "dont">("do");
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [notesContent, setNotesContent] = useState("");
   const { toast } = useToast();
+
+  const openNotesDialog = (habit: Habit) => {
+    setSelectedHabit(habit);
+    setNotesContent(habit.notes || "");
+    setNotesDialogOpen(true);
+  };
+
+  const handleSaveNotes = () => {
+    if (selectedHabit) {
+      onUpdateHabitNotes(selectedHabit.id, notesContent);
+      setNotesDialogOpen(false);
+      setSelectedHabit(null);
+      setNotesContent("");
+    }
+  };
 
   const dos = habits.filter((h) => h.type === "do" && h.is_active);
   const donts = habits.filter((h) => h.type === "dont" && h.is_active);
@@ -121,14 +144,24 @@ export const HabitList = ({
                   {habit.name}
                 </span>
               </label>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDeleteHabit(habit.id)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => openNotesDialog(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  {habit.notes ? <FileText className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDeleteHabit(habit.id)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
           {dos.length === 0 && (
@@ -166,14 +199,24 @@ export const HabitList = ({
                   {habit.name}
                 </span>
               </label>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onDeleteHabit(habit.id)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => openNotesDialog(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  {habit.notes ? <FileText className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => onDeleteHabit(habit.id)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
           {donts.length === 0 && (
@@ -181,6 +224,32 @@ export const HabitList = ({
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {selectedHabit?.notes ? "Edit" : "Add"} Reminder Note
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Write your reminder or description here..."
+              value={notesContent}
+              onChange={(e) => setNotesContent(e.target.value)}
+              className="min-h-[120px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotesDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={handleSaveNotes}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
