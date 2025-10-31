@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, isBefore, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface CalendarProps {
@@ -44,6 +44,7 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus, getDayPoints 
           const points = getDayPoints(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isCurrent = isToday(day);
+          const isPastDate = isBefore(startOfDay(day), startOfDay(new Date())) && !isCurrent;
 
           return (
             <button
@@ -54,10 +55,11 @@ export const Calendar = ({ currentDate, onDateClick, getDayStatus, getDayPoints 
                 "flex flex-col items-center justify-center relative gap-0.5",
                 !isCurrentMonth && "opacity-40",
                 isCurrent && "ring-2 ring-primary ring-offset-2",
-                status === "success" && "bg-success text-success-foreground hover:bg-success/90",
-                status === "warning" && "bg-accent text-accent-foreground hover:bg-accent/90",
-                status === "failure" && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-                status === "neutral" && "bg-muted hover:bg-muted/80 text-foreground"
+                !isPastDate && !isCurrent && "bg-muted hover:bg-muted/80 text-foreground",
+                (isPastDate || isCurrent) && status === "success" && "bg-success text-success-foreground hover:bg-success/90",
+                (isPastDate || isCurrent) && status === "warning" && "bg-accent text-accent-foreground hover:bg-accent/90",
+                (isPastDate || isCurrent) && status === "failure" && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                (isPastDate || isCurrent) && status === "neutral" && "bg-muted hover:bg-muted/80 text-foreground"
               )}
             >
               <span>{format(day, "d")}</span>
