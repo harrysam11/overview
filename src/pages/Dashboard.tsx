@@ -7,7 +7,8 @@ import { Calendar } from "@/components/Calendar";
 import { HabitList } from "@/components/HabitList";
 import { JournalEntry } from "@/components/JournalEntry";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { NotificationSettings } from "@/components/NotificationSettings";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
+import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "@/lib/supabase";
@@ -389,7 +390,7 @@ const Dashboard = () => {
             HabitFlow
           </h1>
           <div className="flex items-center gap-2">
-            <NotificationSettings userId={userId} />
+            <SettingsDialog userId={userId} />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-5 w-5" />
@@ -481,6 +482,8 @@ const Dashboard = () => {
               content={journalContent}
               onSave={handleSaveJournal}
             />
+
+            <AnalyticsCharts habits={habits} />
           </div>
         </div>
       </main>
