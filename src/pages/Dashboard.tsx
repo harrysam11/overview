@@ -7,6 +7,7 @@ import { Calendar } from "@/components/Calendar";
 import { HabitList } from "@/components/HabitList";
 import { JournalEntry } from "@/components/JournalEntry";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "@/lib/supabase";
@@ -39,7 +40,14 @@ const Dashboard = () => {
   const [completedHabits, setCompletedHabits] = useState<Set<string>>(new Set());
   const [journalContent, setJournalContent] = useState("");
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | undefined>();
   const { toast } = useToast();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id);
+    });
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -381,6 +389,7 @@ const Dashboard = () => {
             HabitFlow
           </h1>
           <div className="flex items-center gap-2">
+            <NotificationSettings userId={userId} />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-5 w-5" />
