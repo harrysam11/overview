@@ -1,10 +1,1 @@
 project_id = "wmnfnsiircxabypnfcxo"
-
-[functions.generate-vapid-keys]
-verify_jwt = false
-
-[functions.send-test-notification]
-verify_jwt = false
-
-[functions.send-habit-reminders]
-verify_jwt = false
