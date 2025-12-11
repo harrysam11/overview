@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { habitNameSchema } from "@/lib/validation";
+import { habitNameSchema, habitNotesSchema } from "@/lib/validation";
 import { useToast } from "@/hooks/use-toast";
 
 interface Habit {
@@ -49,7 +49,16 @@ export const HabitList = ({
 
   const handleSaveNotes = () => {
     if (selectedHabit) {
-      onUpdateHabitNotes(selectedHabit.id, notesContent);
+      const validation = habitNotesSchema.safeParse(notesContent);
+      if (!validation.success) {
+        toast({
+          title: "Invalid notes",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+      onUpdateHabitNotes(selectedHabit.id, validation.data || "");
       setNotesDialogOpen(false);
       setSelectedHabit(null);
       setNotesContent("");
@@ -232,13 +241,17 @@ export const HabitList = ({
               {selectedHabit?.notes ? "Edit" : "Add"} Reminder Note
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-2">
             <Textarea
               placeholder="Write your reminder or description here..."
               value={notesContent}
               onChange={(e) => setNotesContent(e.target.value)}
               className="min-h-[120px]"
+              maxLength={1000}
             />
+            <p className="text-xs text-muted-foreground text-right">
+              {notesContent.length}/1000 characters
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNotesDialogOpen(false)}>
