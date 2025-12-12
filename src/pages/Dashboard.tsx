@@ -9,6 +9,8 @@ import { JournalEntry } from "@/components/JournalEntry";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
+import { StreakDisplay } from "@/components/StreakDisplay";
+import { useStreak } from "@/hooks/useStreak";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "@/lib/supabase";
@@ -43,6 +45,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | undefined>();
   const { toast } = useToast();
+  const { currentStreak, longestStreak, loading: streakLoading, refreshStreak } = useStreak(habits);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -459,6 +462,12 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <StreakDisplay 
+              currentStreak={currentStreak} 
+              longestStreak={longestStreak}
+              loading={streakLoading}
+            />
           </div>
 
           <div className="space-y-6">
