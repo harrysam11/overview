@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from "date-fns";
-import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/Calendar";
@@ -14,7 +15,6 @@ import { useStreak } from "@/hooks/useStreak";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "@/lib/supabase";
-
 interface Habit {
   id: string;
   name: string;
@@ -34,6 +34,7 @@ interface DayPoints {
 }
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -393,6 +394,9 @@ const Dashboard = () => {
             HabitFlow
           </h1>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/social")}>
+              <Users className="h-5 w-5" />
+            </Button>
             <SettingsDialog userId={userId} />
             <ThemeToggle />
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
