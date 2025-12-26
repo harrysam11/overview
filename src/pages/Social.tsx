@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, Trophy, UserPlus, Bell } from "lucide-react";
+import { ArrowLeft, Users, Trophy, UserPlus, Bell, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,14 +11,20 @@ import { FriendsList } from "@/components/social/FriendsList";
 import { CreateChallengeDialog } from "@/components/challenges/CreateChallengeDialog";
 import { ChallengeCard } from "@/components/challenges/ChallengeCard";
 import { ChallengeInvites } from "@/components/challenges/ChallengeInvites";
+import { ChallengeLeaderboard } from "@/components/challenges/ChallengeLeaderboard";
 import { useFriends } from "@/hooks/useFriends";
 import { useChallenges } from "@/hooks/useChallenges";
+import { useChallengeProgress } from "@/hooks/useChallengeProgress";
+import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
 const Social = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [selectedChallenge, setSelectedChallenge] = useState<string | null>(null);
+  
   const {
     friends,
     incomingRequests,
@@ -29,6 +35,7 @@ const Social = () => {
     rejectRequest,
     removeFriend,
     searchUsers,
+    refresh: refreshFriends,
   } = useFriends();
 
   const {
@@ -41,7 +48,17 @@ const Social = () => {
     acceptInvite,
     rejectInvite,
     leaveChallenge,
+    refresh: refreshChallenges,
   } = useChallenges();
+
+  const { syncAllProgress } = useChallengeProgress();
+
+  // Real-time notifications
+  useRealtimeNotifications({
+    userId,
+    onFriendRequest: refreshFriends,
+    onChallengeInvite: refreshChallenges,
+  });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -53,6 +70,21 @@ const Social = () => {
     });
   }, [navigate]);
 
+  // Auto-sync progress when challenges load
+  useEffect(() => {
+    if (userId && challenges.length > 0 && !challengesLoading) {
+      syncAllProgress(challenges, userId).then(() => refreshChallenges());
+    }
+  }, [userId, challenges.length, challengesLoading]);
+
+  const handleSyncProgress = useCallback(async () => {
+    if (!userId || challenges.length === 0) return;
+    setSyncing(true);
+    await syncAllProgress(challenges, userId);
+    await refreshChallenges();
+    setSyncing(false);
+  }, [userId, challenges, syncAllProgress, refreshChallenges]);
+
   const totalNotifications = incomingRequests.length + invites.length;
 
   if (!userId) {
@@ -62,6 +94,10 @@ const Social = () => {
       </div>
     );
   }
+
+  const selectedChallengeData = selectedChallenge 
+    ? challenges.find(c => c.id === selectedChallenge)
+    : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-primary/5">
@@ -177,8 +213,17 @@ const Social = () => {
               onReject={rejectInvite}
             />
 
-            {/* Create Challenge */}
-            <div className="flex justify-end">
+            {/* Actions */}
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSyncProgress}
+                disabled={syncing || challenges.length === 0}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                Sync Progress
+              </Button>
               <CreateChallengeDialog onCreate={createChallenge} />
             </div>
 
@@ -198,18 +243,46 @@ const Social = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {challenges.map((challenge) => (
-                  <ChallengeCard
-                    key={challenge.id}
-                    challenge={challenge}
-                    participants={participants.get(challenge.id) || []}
-                    currentUserId={userId}
-                    friends={friends}
-                    onInvite={inviteFriend}
-                    onLeave={leaveChallenge}
-                  />
-                ))}
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Your Challenges</h3>
+                  {challenges.map((challenge) => (
+                    <div
+                      key={challenge.id}
+                      className={`cursor-pointer transition-all ${
+                        selectedChallenge === challenge.id ? "ring-2 ring-primary rounded-lg" : ""
+                      }`}
+                      onClick={() => setSelectedChallenge(challenge.id)}
+                    >
+                      <ChallengeCard
+                        challenge={challenge}
+                        participants={participants.get(challenge.id) || []}
+                        currentUserId={userId}
+                        friends={friends}
+                        onInvite={inviteFriend}
+                        onLeave={leaveChallenge}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Leaderboard Panel */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Leaderboard</h3>
+                  {selectedChallengeData ? (
+                    <ChallengeLeaderboard
+                      challenge={selectedChallengeData}
+                      participants={participants.get(selectedChallengeData.id) || []}
+                      currentUserId={userId}
+                    />
+                  ) : (
+                    <Card>
+                      <CardContent className="py-12 text-center text-muted-foreground">
+                        Select a challenge to view its leaderboard
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
             )}
           </TabsContent>
