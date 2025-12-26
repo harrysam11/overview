@@ -367,14 +367,6 @@ export type Database = {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
       }
-      can_view_challenge: {
-        Args: { _challenge_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_challenge_participant: {
-        Args: { _challenge_id: string; _user_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       challenge_goal_type: "points" | "streak_days" | "habits_completed"
