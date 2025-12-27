@@ -16,6 +16,7 @@ export interface Friend {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+  username?: string | null;
 }
 
 export const useFriends = () => {
@@ -53,7 +54,7 @@ export const useFriends = () => {
       if (friendIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, display_name, avatar_url")
+          .select("id, display_name, avatar_url, username")
           .in("id", friendIds);
 
         if (profilesError) throw profilesError;

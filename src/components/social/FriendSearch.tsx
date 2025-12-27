@@ -56,7 +56,7 @@ export const FriendSearch = ({
     <div className="space-y-4">
       <div className="flex gap-2">
         <Input
-          placeholder="Search by display name..."
+          placeholder="Search by display name or @username..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -82,7 +82,12 @@ export const FriendSearch = ({
                     <AvatarImage src={user.avatar_url || undefined} />
                     <AvatarFallback>{getInitials(user.display_name)}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{user.display_name || "Anonymous"}</span>
+                  <div>
+                    <span className="font-medium">{user.display_name || "Anonymous"}</span>
+                    {user.username && (
+                      <p className="text-sm text-muted-foreground">@{user.username}</p>
+                    )}
+                  </div>
                 </div>
                 
                 {isFriend ? (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { UserMinus, Loader2 } from "lucide-react";
+import { UserMinus, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -18,9 +18,10 @@ import { Friend } from "@/hooks/useFriends";
 interface FriendsListProps {
   friends: Friend[];
   onRemove: (friendId: string) => Promise<void>;
+  onStartChat?: (friendId: string) => void;
 }
 
-export const FriendsList = ({ friends, onRemove }: FriendsListProps) => {
+export const FriendsList = ({ friends, onRemove, onStartChat }: FriendsListProps) => {
   const [removingId, setRemovingId] = useState<string | null>(null);
 
   const getInitials = (name: string | null) => {
@@ -57,40 +58,57 @@ export const FriendsList = ({ friends, onRemove }: FriendsListProps) => {
               <AvatarImage src={friend.avatar_url || undefined} />
               <AvatarFallback>{getInitials(friend.display_name)}</AvatarFallback>
             </Avatar>
-            <span className="font-medium">{friend.display_name || "Anonymous"}</span>
+            <div>
+              <span className="font-medium">{friend.display_name || "Anonymous"}</span>
+              {friend.username && (
+                <p className="text-sm text-muted-foreground">@{friend.username}</p>
+              )}
+            </div>
           </div>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <div className="flex items-center gap-2">
+            {onStartChat && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-destructive hover:text-destructive"
-                disabled={removingId === friend.id}
+                onClick={() => onStartChat(friend.id)}
               >
-                {removingId === friend.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <UserMinus className="h-4 w-4" />
-                )}
+                <MessageCircle className="h-4 w-4" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove friend?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to remove {friend.display_name || "this user"} from
-                  your friends? You'll need to send a new friend request to reconnect.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => handleRemove(friend.id)}>
-                  Remove
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            )}
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  disabled={removingId === friend.id}
+                >
+                  {removingId === friend.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <UserMinus className="h-4 w-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove friend?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to remove {friend.display_name || "this user"} from
+                    your friends? You'll need to send a new friend request to reconnect.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => handleRemove(friend.id)}>
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       ))}
     </div>
