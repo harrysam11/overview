@@ -179,12 +179,13 @@ async function handleUserSearch(supabase: any, userId: string, data: { query: st
     return { results: [] };
   }
 
+  // Search by both display_name and username
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url')
+    .select('id, display_name, avatar_url, username')
     .eq('is_searchable', true)
     .neq('id', userId)
-    .ilike('display_name', `%${sanitized}%`)
+    .or(`display_name.ilike.%${sanitized}%,username.ilike.%${sanitized}%`)
     .limit(10);
 
   if (error) throw error;
