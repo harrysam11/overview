@@ -345,6 +345,41 @@ export const useChallenges = () => {
     }
   };
 
+  const deleteChallenge = async (challengeId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Delete participants first
+      await supabase
+        .from("challenge_participants")
+        .delete()
+        .eq("challenge_id", challengeId);
+
+      // Delete invites
+      await supabase
+        .from("challenge_invites")
+        .delete()
+        .eq("challenge_id", challengeId);
+
+      // Delete challenge
+      const { error } = await supabase
+        .from("challenges")
+        .delete()
+        .eq("id", challengeId)
+        .eq("creator_id", user.id);
+
+      if (error) throw error;
+      toast({ title: "Challenge deleted" });
+      await loadChallenges();
+    } catch (error: any) {
+      toast({
+        description: "Failed to delete challenge",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     challenges,
     participants,
@@ -355,6 +390,7 @@ export const useChallenges = () => {
     acceptInvite,
     rejectInvite,
     leaveChallenge,
+    deleteChallenge,
     updateProgress,
     refresh: () => Promise.all([loadChallenges(), loadInvites()]),
   };

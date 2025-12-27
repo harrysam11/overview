@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, isPast, isFuture, isWithinInterval } from "date-fns";
-import { Trophy, Users, Calendar, Target, UserPlus, LogOut } from "lucide-react";
+import { Trophy, Users, Calendar, Target, UserPlus, LogOut, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Challenge, ChallengeParticipant, ChallengeGoalType } from "@/hooks/useChallenges";
 import { Friend } from "@/hooks/useFriends";
 
@@ -24,6 +35,7 @@ interface ChallengeCardProps {
   friends: Friend[];
   onInvite: (challengeId: string, friendId: string) => Promise<void>;
   onLeave: (challengeId: string) => Promise<void>;
+  onDelete?: (challengeId: string) => Promise<void>;
 }
 
 export const ChallengeCard = ({
@@ -33,6 +45,7 @@ export const ChallengeCard = ({
   friends,
   onInvite,
   onLeave,
+  onDelete,
 }: ChallengeCardProps) => {
   const [inviteOpen, setInviteOpen] = useState(false);
 
@@ -202,6 +215,38 @@ export const ChallengeCard = ({
               <LogOut className="h-4 w-4 mr-1" />
               Leave
             </Button>
+          )}
+
+          {isCreator && onDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Challenge?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete "{challenge.name}" and remove all participants. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDelete(challenge.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </CardContent>

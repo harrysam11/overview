@@ -48,6 +48,7 @@ const Social = () => {
     acceptInvite,
     rejectInvite,
     leaveChallenge,
+    deleteChallenge,
     refresh: refreshChallenges,
   } = useChallenges();
 
@@ -261,6 +262,7 @@ const Social = () => {
                         friends={friends}
                         onInvite={inviteFriend}
                         onLeave={leaveChallenge}
+                        onDelete={deleteChallenge}
                       />
                     </div>
                   ))}
