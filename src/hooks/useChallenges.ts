@@ -233,15 +233,22 @@ export const useChallenges = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("challenge_invites")
-        .insert({
-          challenge_id: challengeId,
-          from_user_id: user.id,
-          to_user_id: friendId,
-        });
+      // Use rate-limited Edge Function
+      const { data, error } = await supabase.functions.invoke('rate-limited-action', {
+        body: {
+          action: 'challenge_invite',
+          data: { challengeId, friendId }
+        }
+      });
 
       if (error) throw error;
+      if (!data?.success) {
+        if (data?.rateLimited) {
+          throw new Error("Too many invites. Please try again later.");
+        }
+        throw new Error(data?.error || "Failed to send invite");
+      }
+
       toast({ title: "Invite sent!" });
     } catch (error: any) {
       toast({

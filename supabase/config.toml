@@ -1,1 +1,4 @@
 project_id = "wmnfnsiircxabypnfcxo"
+
+[functions.rate-limited-action]
+verify_jwt = true
