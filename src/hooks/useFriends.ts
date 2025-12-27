@@ -151,14 +151,22 @@ export const useFriends = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error } = await supabase
-        .from("friend_requests")
-        .insert({
-          from_user_id: user.id,
-          to_user_id: toUserId,
-        });
+      // Use rate-limited Edge Function
+      const { data, error } = await supabase.functions.invoke('rate-limited-action', {
+        body: {
+          action: 'friend_request',
+          data: { toUserId }
+        }
+      });
 
       if (error) throw error;
+      if (!data?.success) {
+        if (data?.rateLimited) {
+          throw new Error("Too many requests. Please try again later.");
+        }
+        throw new Error(data?.error || "Failed to send friend request");
+      }
+
       toast({ title: "Friend request sent!" });
       await loadRequests();
     } catch (error: any) {
@@ -237,16 +245,24 @@ export const useFriends = () => {
       const sanitized = query.trim().substring(0, 50).replace(/[^a-zA-Z0-9\s_-]/g, '');
       if (sanitized.length < 2) return [];
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url")
-        .eq("is_searchable", true)
-        .neq("id", user.id)
-        .ilike("display_name", `%${sanitized}%`)
-        .limit(10);
+      // Use rate-limited Edge Function for server-side protection
+      const { data, error } = await supabase.functions.invoke('rate-limited-action', {
+        body: {
+          action: 'user_search',
+          data: { query: sanitized }
+        }
+      });
 
       if (error) throw error;
-      return data || [];
+      if (!data?.success) {
+        if (data?.rateLimited) {
+          console.log("Search rate limited");
+          return [];
+        }
+        throw new Error(data?.error || "Search failed");
+      }
+
+      return data.results || [];
     } catch (error) {
       return [];
     }
