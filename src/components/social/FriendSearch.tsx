@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Search, UserPlus, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,14 +22,24 @@ export const FriendSearch = ({
   const [results, setResults] = useState<Friend[]>([]);
   const [searching, setSearching] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const lastSearchTime = useRef<number>(0);
+  const SEARCH_COOLDOWN_MS = 500;
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (query.trim().length < 2) return;
+    
+    // Rate limit: enforce cooldown between searches
+    const now = Date.now();
+    if (now - lastSearchTime.current < SEARCH_COOLDOWN_MS) {
+      return;
+    }
+    lastSearchTime.current = now;
+    
     setSearching(true);
     const found = await onSearch(query.trim());
     setResults(found);
     setSearching(false);
-  };
+  }, [query, onSearch]);
 
   const handleSendRequest = async (userId: string) => {
     setSendingTo(userId);

@@ -350,13 +350,25 @@ export const useChallenges = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Delete participants first
+      // Verify ownership first before any deletions
+      const { data: challenge, error: verifyError } = await supabase
+        .from("challenges")
+        .select("id")
+        .eq("id", challengeId)
+        .eq("creator_id", user.id)
+        .single();
+
+      if (verifyError || !challenge) {
+        throw new Error("Not authorized to delete this challenge");
+      }
+
+      // Delete participants (only after ownership verified)
       await supabase
         .from("challenge_participants")
         .delete()
         .eq("challenge_id", challengeId);
 
-      // Delete invites
+      // Delete invites (only after ownership verified)
       await supabase
         .from("challenge_invites")
         .delete()
@@ -374,7 +386,7 @@ export const useChallenges = () => {
       await loadChallenges();
     } catch (error: any) {
       toast({
-        description: "Failed to delete challenge",
+        description: error.message || "Failed to delete challenge",
         variant: "destructive",
       });
     }

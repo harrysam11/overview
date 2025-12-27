@@ -233,12 +233,16 @@ export const useFriends = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
+      // Sanitize input: limit length and remove special characters
+      const sanitized = query.trim().substring(0, 50).replace(/[^a-zA-Z0-9\s_-]/g, '');
+      if (sanitized.length < 2) return [];
+
       const { data, error } = await supabase
         .from("profiles")
         .select("id, display_name, avatar_url")
         .eq("is_searchable", true)
         .neq("id", user.id)
-        .ilike("display_name", `%${query}%`)
+        .ilike("display_name", `%${sanitized}%`)
         .limit(10);
 
       if (error) throw error;
