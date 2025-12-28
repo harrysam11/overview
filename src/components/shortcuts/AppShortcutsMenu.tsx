@@ -204,11 +204,15 @@ export const AppShortcutsMenu = () => {
                             alt={`${shortcut.name} favicon`}
                             className="w-5 h-5 object-contain"
                             onError={(e) => {
-                              e.currentTarget.src = "";
+                              e.currentTarget.style.display = "none";
                               e.currentTarget.onerror = null;
                               const parent = e.currentTarget.parentElement;
                               if (parent) {
-                                parent.innerHTML = `<span class="text-xs font-medium">${shortcut.name.charAt(0).toUpperCase()}</span>`;
+                                // Use safe DOM manipulation instead of innerHTML
+                                const span = document.createElement('span');
+                                span.className = 'text-xs font-medium';
+                                span.textContent = shortcut.name.charAt(0).toUpperCase();
+                                parent.appendChild(span);
                               }
                             }}
                           />
