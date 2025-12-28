@@ -168,7 +168,7 @@ async function handleChallengeInvite(supabase: any, userId: string, data: { chal
   return { message: 'Invite sent!' };
 }
 
-async function handleUserSearch(supabase: any, userId: string, data: { query: string }) {
+async function handleUserSearch(_supabase: any, userId: string, data: { query: string }) {
   if (!data.query) {
     return { results: [] };
   }
@@ -179,15 +179,36 @@ async function handleUserSearch(supabase: any, userId: string, data: { query: st
     return { results: [] };
   }
 
-  // Search by both display_name and username
-  const { data: profiles, error } = await supabase
+  // Use service role to bypass RLS for searching all searchable profiles
+  // This is safe because we enforce rate limiting and only return limited fields
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+  const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+  // Search by both display_name and username using separate ilike calls for safety
+  const { data: byDisplayName, error: error1 } = await adminClient
     .from('profiles')
     .select('id, display_name, avatar_url, username')
     .eq('is_searchable', true)
     .neq('id', userId)
-    .or(`display_name.ilike.%${sanitized}%,username.ilike.%${sanitized}%`)
+    .ilike('display_name', `%${sanitized}%`)
     .limit(10);
 
-  if (error) throw error;
-  return { results: profiles || [] };
+  const { data: byUsername, error: error2 } = await adminClient
+    .from('profiles')
+    .select('id, display_name, avatar_url, username')
+    .eq('is_searchable', true)
+    .neq('id', userId)
+    .ilike('username', `%${sanitized}%`)
+    .limit(10);
+
+  if (error1) throw error1;
+  if (error2) throw error2;
+
+  // Combine and deduplicate results
+  const combined = [...(byDisplayName || []), ...(byUsername || [])];
+  const uniqueProfiles = Array.from(new Map(combined.map(p => [p.id, p])).values());
+  
+  return { results: uniqueProfiles.slice(0, 10) };
 }
