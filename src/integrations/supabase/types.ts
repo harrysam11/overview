@@ -590,6 +590,18 @@ export type Database = {
         Returns: boolean
       }
       cleanup_rate_limits: { Args: never; Returns: undefined }
+      get_user_subscription_info: {
+        Args: { _user_id: string }
+        Returns: {
+          created_at: string
+          endpoint: string
+          id: string
+        }[]
+      }
+      has_push_subscription: {
+        Args: { _endpoint?: string; _user_id: string }
+        Returns: boolean
+      }
       is_challenge_participant: {
         Args: { _challenge_id: string; _user_id: string }
         Returns: boolean
