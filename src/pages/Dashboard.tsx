@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 import { StreakDisplay } from "@/components/StreakDisplay";
+import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
 import { useStreak } from "@/hooks/useStreak";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -394,6 +395,7 @@ const Dashboard = () => {
             HabitFlow
           </h1>
           <div className="flex items-center gap-2">
+            <AppShortcutsMenu />
             <Button variant="ghost" size="icon" onClick={() => navigate("/social")}>
               <Users className="h-5 w-5" />
             </Button>
