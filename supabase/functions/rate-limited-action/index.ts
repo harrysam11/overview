@@ -11,6 +11,7 @@ const RATE_LIMITS = {
   friend_request: { maxRequests: 20, windowMinutes: 60 },     // 20 per hour
   challenge_invite: { maxRequests: 50, windowMinutes: 60 },   // 50 per hour
   user_search: { maxRequests: 60, windowMinutes: 1 },         // 60 per minute
+  profile_lookup: { maxRequests: 30, windowMinutes: 1 },      // 30 per minute - prevent enumeration
 };
 
 serve(async (req) => {
@@ -99,6 +100,9 @@ serve(async (req) => {
         break;
       case 'user_search':
         result = await handleUserSearch(supabase, user.id, data);
+        break;
+      case 'profile_lookup':
+        result = await handleProfileLookup(supabase, user.id, data);
         break;
       default:
         return new Response(
@@ -211,4 +215,47 @@ async function handleUserSearch(_supabase: any, userId: string, data: { query: s
   const uniqueProfiles = Array.from(new Map(combined.map(p => [p.id, p])).values());
   
   return { results: uniqueProfiles.slice(0, 10) };
+}
+
+async function handleProfileLookup(supabase: any, userId: string, data: { profileId?: string; username?: string }) {
+  // Validate that at least one lookup parameter is provided
+  if (!data.profileId && !data.username) {
+    throw new Error('Either profileId or username is required');
+  }
+
+  // Validate UUID format if profileId is provided
+  if (data.profileId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(data.profileId)) {
+      throw new Error('Invalid profile ID format');
+    }
+  }
+
+  // Sanitize username if provided
+  if (data.username) {
+    const sanitized = data.username.trim().substring(0, 50).replace(/[^a-zA-Z0-9_-]/g, '');
+    if (sanitized.length < 1) {
+      throw new Error('Invalid username format');
+    }
+  }
+
+  // Use the user's supabase client which respects RLS
+  // This ensures users can only look up their own profile or friends' profiles
+  let query = supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, username');
+
+  if (data.profileId) {
+    query = query.eq('id', data.profileId);
+  } else if (data.username) {
+    query = query.eq('username', data.username.trim());
+  }
+
+  const { data: profile, error } = await query.maybeSingle();
+
+  if (error) throw error;
+
+  // Return null if not found or not authorized (RLS will filter)
+  // This prevents enumeration by returning the same response for both cases
+  return { profile: profile || null };
 }
