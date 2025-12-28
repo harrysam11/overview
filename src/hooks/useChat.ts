@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { messageContentSchema } from "@/lib/validation";
 
 export interface Message {
   id: string;
@@ -151,15 +152,22 @@ export const useChat = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const trimmedContent = content.trim();
-      if (!trimmedContent) return;
+      // Validate message content
+      const result = messageContentSchema.safeParse(content);
+      if (!result.success) {
+        toast({
+          description: result.error.errors[0]?.message || "Invalid message",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const { error } = await supabase
         .from("messages")
         .insert({
           sender_id: user.id,
           receiver_id: receiverId,
-          content: trimmedContent,
+          content: result.data,
         });
 
       if (error) throw error;

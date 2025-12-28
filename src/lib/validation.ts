@@ -34,3 +34,9 @@ export const habitNotesSchema = z
   .max(1000, "Notes must be less than 1000 characters")
   .optional()
   .or(z.literal(""));
+
+export const messageContentSchema = z
+  .string()
+  .trim()
+  .min(1, "Message cannot be empty")
+  .max(5000, "Message must be less than 5000 characters");
