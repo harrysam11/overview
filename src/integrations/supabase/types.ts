@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_shortcuts: {
+        Row: {
+          created_at: string
+          favicon_url: string | null
+          id: string
+          name: string
+          sort_order: number
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          favicon_url?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          favicon_url?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       challenge_invites: {
         Row: {
           challenge_id: string

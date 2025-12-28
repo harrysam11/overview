@@ -16,6 +16,7 @@ import { ChatList } from "@/components/chat/ChatList";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { CreateGroupDialog } from "@/components/chat/CreateGroupDialog";
 import { AddGroupMemberDialog } from "@/components/chat/AddGroupMemberDialog";
+import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
 import { useFriends } from "@/hooks/useFriends";
 import { useChallenges } from "@/hooks/useChallenges";
 import { useChallengeProgress } from "@/hooks/useChallengeProgress";
@@ -190,7 +191,10 @@ const Social = () => {
               </Badge>
             )}
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <AppShortcutsMenu />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
