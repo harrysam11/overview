@@ -462,6 +462,27 @@ export type Database = {
         }
         Relationships: []
       }
+      level_definitions: {
+        Row: {
+          icon: string
+          level: number
+          min_xp: number
+          title: string
+        }
+        Insert: {
+          icon: string
+          level: number
+          min_xp: number
+          title: string
+        }
+        Update: {
+          icon?: string
+          level?: number
+          min_xp?: number
+          title?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -631,6 +652,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_levels: {
+        Row: {
+          total_xp: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          total_xp?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          total_xp?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
