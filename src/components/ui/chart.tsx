@@ -58,6 +58,52 @@ const ChartContainer = React.forwardRef<
 });
 ChartContainer.displayName = "Chart";
 
+// Validates CSS color values to prevent injection attacks
+// Only allows: hex colors, rgb/rgba, hsl/hsla, and named CSS colors
+const isValidCssColor = (value: string): boolean => {
+  if (!value || typeof value !== 'string') return false;
+  
+  const trimmed = value.trim();
+  
+  // Hex colors: #RGB, #RRGGBB, #RGBA, #RRGGBBAA
+  if (/^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) {
+    return true;
+  }
+  
+  // RGB/RGBA: rgb(r, g, b) or rgba(r, g, b, a)
+  if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+))?\s*\)$/.test(trimmed)) {
+    return true;
+  }
+  
+  // HSL/HSLA: hsl(h, s%, l%) or hsla(h, s%, l%, a)
+  if (/^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%\s*(,\s*(0|1|0?\.\d+))?\s*\)$/.test(trimmed)) {
+    return true;
+  }
+  
+  // CSS variable references: var(--color-name)
+  if (/^var\(--[a-zA-Z0-9-]+\)$/.test(trimmed)) {
+    return true;
+  }
+  
+  // Named CSS colors (common ones used in charts)
+  const namedColors = [
+    'transparent', 'currentcolor', 'inherit',
+    'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange', 'purple', 
+    'pink', 'cyan', 'magenta', 'gray', 'grey', 'silver', 'gold', 'navy',
+    'teal', 'olive', 'maroon', 'lime', 'aqua', 'fuchsia'
+  ];
+  if (namedColors.includes(trimmed.toLowerCase())) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Sanitizes a CSS property key to prevent injection
+const sanitizeCssKey = (key: string): string => {
+  return key.replace(/[^a-zA-Z0-9-]/g, '');
+};
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(([_, config]) => config.theme || config.color);
 
@@ -65,23 +111,36 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // Build styles with validated colors only
+  const cssContent = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const colorVars = colorConfig
+        .map(([key, itemConfig]) => {
+          const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+          const sanitizedKey = sanitizeCssKey(key);
+          
+          // Only include valid, sanitized color values
+          if (color && isValidCssColor(color) && sanitizedKey) {
+            return `  --color-${sanitizedKey}: ${color};`;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .join("\n");
+      
+      return colorVars ? `${prefix} [data-chart=${id}] {\n${colorVars}\n}` : '';
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  if (!cssContent) {
+    return null;
+  }
+
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
-  })
-  .join("\n")}
-}
-`,
-          )
-          .join("\n"),
+        __html: cssContent,
       }}
     />
   );
