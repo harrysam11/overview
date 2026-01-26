@@ -12,7 +12,11 @@ import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 import { StreakDisplay } from "@/components/StreakDisplay";
 import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
+import { BadgeShowcase } from "@/components/badges/BadgeShowcase";
+import { NewBadgeModal } from "@/components/badges/NewBadgeModal";
 import { useStreak } from "@/hooks/useStreak";
+import { useBadges } from "@/hooks/useBadges";
+import { useUserStats } from "@/hooks/useUserStats";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "@/lib/supabase";
@@ -48,6 +52,15 @@ const Dashboard = () => {
   const [userId, setUserId] = useState<string | undefined>();
   const { toast } = useToast();
   const { currentStreak, longestStreak, loading: streakLoading, refreshStreak } = useStreak(habits);
+  const { stats, refetch: refetchStats } = useUserStats(currentStreak);
+  const { newBadge, dismissNewBadge, checkAndAwardBadges } = useBadges();
+
+  // Check for badges when stats change
+  useEffect(() => {
+    if (stats.habits_completed > 0 || stats.journal_entries > 0 || stats.streak_days > 0) {
+      checkAndAwardBadges(stats);
+    }
+  }, [stats, checkAndAwardBadges]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -220,6 +233,9 @@ const Dashboard = () => {
         newCompleted.add(habitId);
       }
       setCompletedHabits(newCompleted);
+      
+      // Refresh stats for badge checking
+      refetchStats();
     } catch (error: any) {
       toast({
         description: "Failed to update habit. Please try again.",
@@ -306,6 +322,9 @@ const Dashboard = () => {
       if (error) throw error;
       setJournalContent(content);
       toast({ title: "Journal saved successfully!" });
+      
+      // Refresh stats for badge checking
+      refetchStats();
     } catch (error: any) {
       toast({
         description: "Failed to save journal entry. Please try again.",
@@ -474,6 +493,8 @@ const Dashboard = () => {
               longestStreak={longestStreak}
               loading={streakLoading}
             />
+
+            <BadgeShowcase />
           </div>
 
           <div className="space-y-6">
@@ -502,6 +523,8 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+      
+      <NewBadgeModal badge={newBadge} onDismiss={dismissNewBadge} />
     </div>
   );
 };
