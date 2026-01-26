@@ -14,9 +14,12 @@ import { StreakDisplay } from "@/components/StreakDisplay";
 import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
 import { BadgeShowcase } from "@/components/badges/BadgeShowcase";
 import { NewBadgeModal } from "@/components/badges/NewBadgeModal";
+import { LevelDisplay } from "@/components/level/LevelDisplay";
+import { LevelUpModal } from "@/components/level/LevelUpModal";
 import { useStreak } from "@/hooks/useStreak";
 import { useBadges } from "@/hooks/useBadges";
 import { useUserStats } from "@/hooks/useUserStats";
+import { useLevel } from "@/hooks/useLevel";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { signOut } from "@/lib/supabase";
@@ -54,6 +57,7 @@ const Dashboard = () => {
   const { currentStreak, longestStreak, loading: streakLoading, refreshStreak } = useStreak(habits);
   const { stats, refetch: refetchStats } = useUserStats(currentStreak);
   const { newBadge, dismissNewBadge, checkAndAwardBadges } = useBadges();
+  const { userLevel, loading: levelLoading, leveledUp, dismissLevelUp, addXp } = useLevel();
 
   // Check for badges when stats change
   useEffect(() => {
@@ -234,6 +238,11 @@ const Dashboard = () => {
       }
       setCompletedHabits(newCompleted);
       
+      // Award XP for completing habit
+      if (!isCompleted) {
+        addXp(10, "Habit completed!");
+      }
+      
       // Refresh stats for badge checking
       refetchStats();
     } catch (error: any) {
@@ -322,6 +331,11 @@ const Dashboard = () => {
       if (error) throw error;
       setJournalContent(content);
       toast({ title: "Journal saved successfully!" });
+      
+      // Award XP for journal entry (only for new entries)
+      if (!journalContent && content) {
+        addXp(20, "Journal entry written!");
+      }
       
       // Refresh stats for badge checking
       refetchStats();
@@ -494,6 +508,8 @@ const Dashboard = () => {
               loading={streakLoading}
             />
 
+            <LevelDisplay userLevel={userLevel} loading={levelLoading} />
+
             <BadgeShowcase />
           </div>
 
@@ -525,6 +541,7 @@ const Dashboard = () => {
       </main>
       
       <NewBadgeModal badge={newBadge} onDismiss={dismissNewBadge} />
+      <LevelUpModal level={leveledUp} onDismiss={dismissLevelUp} />
     </div>
   );
 };

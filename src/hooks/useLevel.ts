@@ -1,0 +1,153 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+export interface LevelDefinition {
+  level: number;
+  title: string;
+  min_xp: number;
+  icon: string;
+}
+
+export interface UserLevel {
+  currentLevel: LevelDefinition;
+  nextLevel: LevelDefinition | null;
+  totalXp: number;
+  xpToNextLevel: number;
+  progressPercent: number;
+}
+
+export const useLevel = () => {
+  const [levels, setLevels] = useState<LevelDefinition[]>([]);
+  const [userLevel, setUserLevel] = useState<UserLevel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [leveledUp, setLeveledUp] = useState<LevelDefinition | null>(null);
+  const { toast } = useToast();
+
+  const calculateLevel = useCallback((xp: number, levelDefs: LevelDefinition[]): UserLevel => {
+    const sortedLevels = [...levelDefs].sort((a, b) => b.min_xp - a.min_xp);
+    
+    let currentLevel = sortedLevels[sortedLevels.length - 1]; // Default to first level
+    for (const level of sortedLevels) {
+      if (xp >= level.min_xp) {
+        currentLevel = level;
+        break;
+      }
+    }
+
+    const currentIndex = levelDefs.findIndex(l => l.level === currentLevel.level);
+    const nextLevel = currentIndex < levelDefs.length - 1 ? levelDefs[currentIndex + 1] : null;
+    
+    const xpInCurrentLevel = xp - currentLevel.min_xp;
+    const xpRequiredForNext = nextLevel ? nextLevel.min_xp - currentLevel.min_xp : 0;
+    const progressPercent = nextLevel ? Math.min((xpInCurrentLevel / xpRequiredForNext) * 100, 100) : 100;
+    const xpToNextLevel = nextLevel ? nextLevel.min_xp - xp : 0;
+
+    return {
+      currentLevel,
+      nextLevel,
+      totalXp: xp,
+      xpToNextLevel,
+      progressPercent,
+    };
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch level definitions
+      const { data: levelDefs, error: levelError } = await supabase
+        .from("level_definitions")
+        .select("*")
+        .order("level");
+
+      if (levelError) throw levelError;
+      setLevels(levelDefs || []);
+
+      // Fetch user's XP
+      let { data: userXp, error: xpError } = await supabase
+        .from("user_levels")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (xpError) throw xpError;
+
+      // Create record if doesn't exist
+      if (!userXp) {
+        const { data: newRecord, error: insertError } = await supabase
+          .from("user_levels")
+          .insert({ user_id: user.id, total_xp: 0 })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        userXp = newRecord;
+      }
+
+      if (levelDefs && levelDefs.length > 0) {
+        setUserLevel(calculateLevel(userXp?.total_xp || 0, levelDefs));
+      }
+    } catch (error) {
+      console.error("Error fetching level data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [calculateLevel]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const addXp = useCallback(async (amount: number, reason?: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !userLevel || levels.length === 0) return;
+
+      const newTotalXp = userLevel.totalXp + amount;
+      const oldLevel = userLevel.currentLevel;
+      const newLevelData = calculateLevel(newTotalXp, levels);
+
+      const { error } = await supabase
+        .from("user_levels")
+        .update({ total_xp: newTotalXp, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setUserLevel(newLevelData);
+
+      // Check for level up
+      if (newLevelData.currentLevel.level > oldLevel.level) {
+        setLeveledUp(newLevelData.currentLevel);
+        toast({
+          title: `⬆️ Level Up! You're now a ${newLevelData.currentLevel.title}!`,
+          description: `You've reached level ${newLevelData.currentLevel.level}`,
+        });
+      } else if (reason) {
+        toast({
+          title: `+${amount} XP`,
+          description: reason,
+        });
+      }
+    } catch (error) {
+      console.error("Error adding XP:", error);
+    }
+  }, [userLevel, levels, calculateLevel, toast]);
+
+  const dismissLevelUp = useCallback(() => {
+    setLeveledUp(null);
+  }, []);
+
+  return {
+    levels,
+    userLevel,
+    loading,
+    leveledUp,
+    addXp,
+    dismissLevelUp,
+    refetch: fetchData,
+  };
+};
