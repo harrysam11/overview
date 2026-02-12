@@ -435,6 +435,74 @@ export type Database = {
         }
         Relationships: []
       }
+      idea_cards: {
+        Row: {
+          category_id: string
+          content: string | null
+          created_at: string
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_cards_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "idea_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      idea_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           content: string
