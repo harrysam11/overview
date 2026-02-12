@@ -13,6 +13,7 @@ import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 import { StreakDisplay } from "@/components/StreakDisplay";
 import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
 import { BadgeShowcase } from "@/components/badges/BadgeShowcase";
+import { ScratchPad } from "@/components/scratchpad/ScratchPad";
 import { NewBadgeModal } from "@/components/badges/NewBadgeModal";
 import { LevelDisplay } from "@/components/level/LevelDisplay";
 import { LevelUpModal } from "@/components/level/LevelUpModal";
@@ -511,6 +512,8 @@ const Dashboard = () => {
             <LevelDisplay userLevel={userLevel} loading={levelLoading} />
 
             <BadgeShowcase />
+
+            <ScratchPad />
           </div>
 
           <div className="space-y-6">
