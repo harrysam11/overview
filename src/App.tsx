@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Social from "./pages/Social";
 import IdeasBoard from "./pages/IdeasBoard";
+import WeeklyPlanner from "./pages/WeeklyPlanner";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/social" element={<Social />} />
             <Route path="/ideas" element={<IdeasBoard />} />
+            <Route path="/planner" element={<WeeklyPlanner />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
