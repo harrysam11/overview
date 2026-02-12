@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from "date-fns";
-import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon, Users, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/Calendar";
@@ -430,8 +430,10 @@ const Dashboard = () => {
           </h1>
           <div className="flex items-center gap-2">
             <AppShortcutsMenu />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/ideas")}>
+              <Lightbulb className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/social")}>
-              <Users className="h-5 w-5" />
             </Button>
             <SettingsDialog userId={userId} />
             <ThemeToggle />
