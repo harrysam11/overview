@@ -875,7 +875,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      notification_subscriptions_safe: {
+        Row: {
+          created_at: string | null
+          endpoint: string | null
+          id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          endpoint?: string | null
+          id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       are_friends: {
