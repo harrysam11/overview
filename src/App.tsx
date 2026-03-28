@@ -13,6 +13,7 @@ import WeeklyPlanner from "./pages/WeeklyPlanner";
 import GoalRoadmap from "./pages/GoalRoadmap";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import { OfflineIndicator } from "./components/OfflineIndicator";
 
 const queryClient = new QueryClient();
 
