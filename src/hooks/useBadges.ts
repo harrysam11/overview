@@ -105,14 +105,13 @@ export const useBadges = () => {
       }
 
       if (qualified) {
-        const { error } = await supabase
-          .from("user_badges")
-          .insert({
-            user_id: user.id,
-            badge_id: badge.id
+        const { data: awarded, error } = await supabase
+          .rpc("award_badge_if_earned", {
+            p_user_id: user.id,
+            p_badge_id: badge.id
           });
 
-        if (!error) {
+        if (!error && awarded) {
           setNewBadge(badge);
           toast({
             title: "🏆 Badge Earned!",
