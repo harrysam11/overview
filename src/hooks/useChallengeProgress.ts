@@ -157,13 +157,10 @@ export const useChallengeProgress = () => {
   ) => {
     try {
       for (const challenge of challenges) {
-        const progress = await calculateProgress(challenge, userId);
-        
-        await supabase
-          .from("challenge_participants")
-          .update({ progress })
-          .eq("challenge_id", challenge.id)
-          .eq("user_id", userId);
+        await supabase.rpc("update_challenge_progress", {
+          p_challenge_id: challenge.id,
+          p_user_id: userId,
+        });
       }
     } catch (error: any) {
       console.error("Error syncing progress:", error);
