@@ -898,6 +898,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_group_member: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
       are_friends: {
         Args: { user1_id: string; user2_id: string }
         Returns: boolean
@@ -940,6 +944,7 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      join_group_as_creator: { Args: { p_group_id: string }; Returns: boolean }
       update_challenge_progress: {
         Args: { p_challenge_id: string; p_user_id: string }
         Returns: number
