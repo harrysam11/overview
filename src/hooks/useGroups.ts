@@ -101,14 +101,11 @@ export const useGroups = () => {
 
       if (error) throw error;
 
-      // Add creator as admin
-      await supabase
-        .from("group_members")
-        .insert({
-          group_id: group.id,
-          user_id: user.id,
-          role: "admin",
-        });
+      // Add creator as admin via server-side function
+      const { error: joinError } = await supabase.rpc("join_group_as_creator", {
+        p_group_id: group.id,
+      });
+      if (joinError) throw joinError;
 
       toast({ title: "Group created!" });
       await loadGroups();
