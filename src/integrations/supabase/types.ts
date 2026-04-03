@@ -940,6 +940,10 @@ export type Database = {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
+      update_challenge_progress: {
+        Args: { p_challenge_id: string; p_user_id: string }
+        Returns: number
+      }
     }
     Enums: {
       challenge_goal_type: "points" | "streak_days" | "habits_completed"
