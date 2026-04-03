@@ -227,13 +227,10 @@ export const useGroups = () => {
 
   const addMember = async (groupId: string, userId: string) => {
     try {
-      const { error } = await supabase
-        .from("group_members")
-        .insert({
-          group_id: groupId,
-          user_id: userId,
-          role: "member",
-        });
+      const { error } = await supabase.rpc("add_group_member", {
+        p_group_id: groupId,
+        p_user_id: userId,
+      });
 
       if (error) throw error;
       toast({ title: "Member added!" });
