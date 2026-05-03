@@ -936,6 +936,7 @@ export type Database = {
         Args: { _endpoint?: string; _user_id: string }
         Returns: boolean
       }
+      increment_xp: { Args: { p_amount: number }; Returns: number }
       is_challenge_participant: {
         Args: { _challenge_id: string; _user_id: string }
         Returns: boolean
