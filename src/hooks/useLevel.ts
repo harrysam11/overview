@@ -110,10 +110,7 @@ export const useLevel = () => {
       const oldLevel = userLevel.currentLevel;
       const newLevelData = calculateLevel(newTotalXp, levels);
 
-      const { error } = await supabase
-        .from("user_levels")
-        .update({ total_xp: newTotalXp, updated_at: new Date().toISOString() })
-        .eq("user_id", user.id);
+      const { error } = await supabase.rpc("increment_xp", { p_amount: amount });
 
       if (error) throw error;
 
