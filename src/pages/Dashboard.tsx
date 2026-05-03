@@ -10,6 +10,7 @@ import { JournalEntry } from "@/components/JournalEntry";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
+import { HabitWiseAnalysis } from "@/components/analytics/HabitWiseAnalysis";
 import { StreakDisplay } from "@/components/StreakDisplay";
 import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
 import { BadgeShowcase } from "@/components/badges/BadgeShowcase";
@@ -548,6 +549,7 @@ const Dashboard = () => {
             />
 
             <AnalyticsCharts habits={habits} />
+            <HabitWiseAnalysis habits={habits} />
           </div>
         </div>
       </main>
