@@ -40,6 +40,7 @@ export const HabitList = ({
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [notesContent, setNotesContent] = useState("");
+  const [workspaceHabit, setWorkspaceHabit] = useState<Habit | null>(null);
   const { toast } = useToast();
 
   const openNotesDialog = (habit: Habit) => {
