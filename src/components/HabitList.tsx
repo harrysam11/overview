@@ -283,6 +283,13 @@ export const HabitList = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HabitWorkspaceDialog
+        habitId={workspaceHabit?.id ?? null}
+        habitName={workspaceHabit?.name ?? ""}
+        open={!!workspaceHabit}
+        onOpenChange={(o) => !o && setWorkspaceHabit(null)}
+      />
     </div>
   );
 };
