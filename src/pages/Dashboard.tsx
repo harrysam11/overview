@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from "date-fns";
-import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon, Users, Lightbulb, CalendarDays, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, BarChart3, Calendar as CalendarIcon, Users, Lightbulb, CalendarDays, Target, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/Calendar";
