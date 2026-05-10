@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Check, X, Plus, Trash2, FileText } from "lucide-react";
+import { Check, X, Plus, Trash2, FileText, FolderOpen } from "lucide-react";
+import { HabitWorkspaceDialog } from "@/components/workspace/HabitWorkspaceDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +40,7 @@ export const HabitList = ({
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [notesContent, setNotesContent] = useState("");
+  const [workspaceHabit, setWorkspaceHabit] = useState<Habit | null>(null);
   const { toast } = useToast();
 
   const openNotesDialog = (habit: Habit) => {
@@ -157,6 +159,15 @@ export const HabitList = ({
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setWorkspaceHabit(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                  title="Workspace"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openNotesDialog(habit)}
                   className="text-muted-foreground hover:text-primary"
                 >
@@ -212,6 +223,15 @@ export const HabitList = ({
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => setWorkspaceHabit(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                  title="Workspace"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openNotesDialog(habit)}
                   className="text-muted-foreground hover:text-primary"
                 >
@@ -263,6 +283,13 @@ export const HabitList = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HabitWorkspaceDialog
+        habitId={workspaceHabit?.id ?? null}
+        habitName={workspaceHabit?.name ?? ""}
+        open={!!workspaceHabit}
+        onOpenChange={(o) => !o && setWorkspaceHabit(null)}
+      />
     </div>
   );
 };

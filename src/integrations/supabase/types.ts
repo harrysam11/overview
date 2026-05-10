@@ -250,6 +250,68 @@ export type Database = {
           },
         ]
       }
+      diary_entries: {
+        Row: {
+          content: Json
+          created_at: string
+          entry_date: string
+          id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          entry_date?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          entry_date?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      diary_entry_habits: {
+        Row: {
+          created_at: string
+          diary_entry_id: string
+          habit_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          diary_entry_id: string
+          habit_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          diary_entry_id?: string
+          habit_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diary_entry_habits_diary_entry_id_fkey"
+            columns: ["diary_entry_id"]
+            isOneToOne: false
+            referencedRelation: "diary_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       friend_requests: {
         Row: {
           created_at: string
@@ -440,6 +502,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      habit_workspace_items: {
+        Row: {
+          created_at: string
+          file_path: string | null
+          file_size: number | null
+          habit_id: string
+          id: string
+          item_type: string
+          mime_type: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path?: string | null
+          file_size?: number | null
+          habit_id: string
+          id?: string
+          item_type: string
+          mime_type?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string | null
+          file_size?: number | null
+          habit_id?: string
+          id?: string
+          item_type?: string
+          mime_type?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       habits: {
         Row: {
