@@ -440,6 +440,9 @@ const Dashboard = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate("/roadmap")}>
               <Target className="h-5 w-5" />
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/diary")} title="Universal Diary">
+              <BookOpen className="h-5 w-5" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/social")}>
               <Users className="h-5 w-5" />
             </Button>
