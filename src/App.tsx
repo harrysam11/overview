@@ -11,6 +11,7 @@ import Social from "./pages/Social";
 import IdeasBoard from "./pages/IdeasBoard";
 import WeeklyPlanner from "./pages/WeeklyPlanner";
 import GoalRoadmap from "./pages/GoalRoadmap";
+import Diary from "./pages/Diary";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import { OfflineIndicator } from "./components/OfflineIndicator";
