@@ -187,29 +187,43 @@ export function HabitWiseAnalysis({ habits }: HabitWiseAnalysisProps) {
                   <div key={s.id} className="space-y-1.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        {s.type === "do" ? (
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
-                        ) : (
-                          <XCircle className="h-4 w-4 shrink-0 text-destructive" />
-                        )}
-                        <span className="text-sm font-medium truncate">{s.name}</span>
-                        <Badge variant="outline" className="text-[10px] py-0 h-4 capitalize">
-                          {s.type === "do" ? "Do" : "Don't"}
-                        </Badge>
-                      </div>
-                      <div className={`text-sm font-semibold tabular-nums ${getRateColor(s.successRate)}`}>
-                        {s.successRate}%
-                      </div>
-                    </div>
-                    <Progress value={s.successRate} className="h-2" />
-                    <div className="text-xs text-muted-foreground">
-                      {s.type === "do"
-                        ? `Completed ${s.successDays} of ${s.totalDays} days`
-                        : `Avoided ${s.successDays} of ${s.totalDays} days`}
-                    </div>
+              {[
+                { key: "do" as const, label: "Do's", icon: CheckCircle2, color: "text-success", list: dos },
+                { key: "dont" as const, label: "Don'ts", icon: XCircle, color: "text-destructive", list: donts },
+              ].map((group) => (
+                <div key={group.key} className="space-y-3">
+                  <div className="flex items-center gap-2 pt-2">
+                    <group.icon className={`h-4 w-4 ${group.color}`} />
+                    <h4 className="text-sm font-semibold">
+                      {group.label} ({group.list.length})
+                    </h4>
                   </div>
-                ))}
-              </div>
+                  {group.list.length === 0 ? (
+                    <p className="text-xs text-muted-foreground pl-6">
+                      No {group.label.toLowerCase()} added yet
+                    </p>
+                  ) : (
+                    group.list.map((s) => (
+                      <div key={s.id} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-medium truncate">{s.name}</span>
+                          </div>
+                          <div className={`text-sm font-semibold tabular-nums ${getRateColor(s.successRate)}`}>
+                            {s.successRate}%
+                          </div>
+                        </div>
+                        <Progress value={s.successRate} className="h-2" />
+                        <div className="text-xs text-muted-foreground">
+                          {s.type === "do"
+                            ? `Completed ${s.successDays} of ${s.totalDays} days`
+                            : `Avoided ${s.successDays} of ${s.totalDays} days (unchecked)`}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ))}
             </TabsContent>
           ))}
         </Tabs>
