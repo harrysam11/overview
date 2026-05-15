@@ -74,12 +74,12 @@ export function HabitWiseAnalysis({ habits }: HabitWiseAnalysisProps) {
 
       let successDays = 0;
       if (habit.type === "do") {
+        // "Do" habits earn a point when checked (completed = true).
         successDays = habitRecords.filter((r) => r.completed === true).length;
       } else {
-        // "Don't" habits are completed by default. A success day is one where
-        // there's no record OR the record is not marked completed (i.e. user didn't slip).
-        const slipDays = habitRecords.filter((r) => r.completed === true).length;
-        successDays = days - slipDays;
+        // "Don't" habits are checked by default. A point is earned only when
+        // the user actively UNCHECKS it (completed = false) for that day.
+        successDays = habitRecords.filter((r) => r.completed === false).length;
       }
 
       const successRate = days > 0 ? Math.round((successDays / days) * 100) : 0;
