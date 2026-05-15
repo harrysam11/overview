@@ -76,7 +76,7 @@ const Diary = () => {
       .insert({ user_id: user.id, entry_date: today, title: "Untitled", content: {} })
       .select()
       .single();
-    if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+    if (error) { console.error(error); toast({ title: "Failed", description: "Could not create entry. Please try again.", variant: "destructive" }); return; }
     setEntries([data as DiaryEntry, ...entries]);
     setSelectedId(data!.id);
   };
