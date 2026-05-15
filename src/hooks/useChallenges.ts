@@ -221,7 +221,7 @@ export const useChallenges = () => {
       return challenge;
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to create challenge",
+        description: "Failed to create challenge",
         variant: "destructive",
       });
       return null;
@@ -252,7 +252,7 @@ export const useChallenges = () => {
       toast({ title: "Invite sent!" });
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to send invite",
+        description: "Failed to send invite",
         variant: "destructive",
       });
     }
@@ -393,7 +393,7 @@ export const useChallenges = () => {
       await loadChallenges();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to delete challenge",
+        description: "Failed to delete challenge",
         variant: "destructive",
       });
     }

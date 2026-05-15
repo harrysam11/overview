@@ -112,7 +112,7 @@ export const useGroups = () => {
       return group;
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to create group",
+        description: "Failed to create group",
         variant: "destructive",
       });
       return null;
@@ -219,7 +219,7 @@ export const useGroups = () => {
       await loadGroupMessages(groupId);
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to send message",
+        description: "Failed to send message",
         variant: "destructive",
       });
     }
@@ -237,7 +237,7 @@ export const useGroups = () => {
       await loadGroupMembers(groupId);
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to add member",
+        description: "Failed to add member",
         variant: "destructive",
       });
     }
@@ -259,7 +259,7 @@ export const useGroups = () => {
       await loadGroups();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to leave group",
+        description: "Failed to leave group",
         variant: "destructive",
       });
     }
@@ -281,7 +281,7 @@ export const useGroups = () => {
       await loadGroups();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to delete group",
+        description: "Failed to delete group",
         variant: "destructive",
       });
     }

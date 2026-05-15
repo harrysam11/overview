@@ -76,7 +76,7 @@ const Diary = () => {
       .insert({ user_id: user.id, entry_date: today, title: "Untitled", content: {} })
       .select()
       .single();
-    if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+    if (error) { console.error(error); toast({ title: "Failed", description: "Could not create entry. Please try again.", variant: "destructive" }); return; }
     setEntries([data as DiaryEntry, ...entries]);
     setSelectedId(data!.id);
   };
@@ -96,7 +96,7 @@ const Diary = () => {
       .from("diary_entries")
       .update(patch)
       .eq("id", selected.id);
-    if (error) toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    if (error) { console.error(error); toast({ title: "Save failed", description: "Could not save entry. Please try again.", variant: "destructive" }); }
     else setEntries((prev) => prev.map((e) => (e.id === selected.id ? { ...e, ...patch } : e)));
     setSaving(false);
   }, [selected, toast]);
@@ -116,7 +116,7 @@ const Diary = () => {
       const { error } = await supabase.from("diary_entry_habits").insert({
         diary_entry_id: selected.id, habit_id: habitId, user_id: user.id,
       });
-      if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+      if (error) { console.error(error); toast({ title: "Failed", description: "Could not tag habit. Please try again.", variant: "destructive" }); return; }
       const ns = new Set(current); ns.add(habitId);
       next.set(selected.id, ns);
     }
