@@ -172,7 +172,7 @@ export const useFriends = () => {
       await loadRequests();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to send friend request",
+        description: "Failed to send friend request",
         variant: "destructive",
       });
     }
