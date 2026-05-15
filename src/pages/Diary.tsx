@@ -116,7 +116,7 @@ const Diary = () => {
       const { error } = await supabase.from("diary_entry_habits").insert({
         diary_entry_id: selected.id, habit_id: habitId, user_id: user.id,
       });
-      if (error) { toast({ title: "Failed", description: error.message, variant: "destructive" }); return; }
+      if (error) { console.error(error); toast({ title: "Failed", description: "Could not tag habit. Please try again.", variant: "destructive" }); return; }
       const ns = new Set(current); ns.add(habitId);
       next.set(selected.id, ns);
     }
