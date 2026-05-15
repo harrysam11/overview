@@ -95,7 +95,7 @@ export const useAppShortcuts = () => {
       await loadShortcuts();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to add shortcut",
+        description: "Failed to add shortcut",
         variant: "destructive",
       });
     }
@@ -114,7 +114,7 @@ export const useAppShortcuts = () => {
       await loadShortcuts();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to remove shortcut",
+        description: "Failed to remove shortcut",
         variant: "destructive",
       });
     }
@@ -156,7 +156,7 @@ export const useAppShortcuts = () => {
       await loadShortcuts();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to update shortcut",
+        description: "Failed to update shortcut",
         variant: "destructive",
       });
     }

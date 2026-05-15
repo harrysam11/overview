@@ -177,7 +177,7 @@ export const useChat = () => {
       await loadConversations();
     } catch (error: any) {
       toast({
-        description: error.message || "Failed to send message",
+        description: "Failed to send message",
         variant: "destructive",
       });
     }

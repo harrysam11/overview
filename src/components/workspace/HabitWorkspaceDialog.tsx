@@ -51,7 +51,7 @@ export const HabitWorkspaceDialog = ({ habitId, habitName, open, onOpenChange }:
       .select("*")
       .eq("habit_id", habitId)
       .order("created_at", { ascending: false });
-    if (error) toast({ title: "Failed to load", description: error.message, variant: "destructive" });
+    if (error) toast({ title: "Failed to load", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
     else setItems((data || []) as WorkspaceItem[]);
     setLoading(false);
   };
@@ -85,7 +85,7 @@ export const HabitWorkspaceDialog = ({ habitId, habitName, open, onOpenChange }:
       toast({ title: "File uploaded" });
       await load();
     } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      toast({ title: "Upload failed", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
     }
     setUploading(false);
   };
@@ -116,7 +116,7 @@ export const HabitWorkspaceDialog = ({ habitId, habitName, open, onOpenChange }:
       url,
     });
     if (error) {
-      toast({ title: "Failed to add link", description: error.message, variant: "destructive" });
+      toast({ title: "Failed to add link", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
       return;
     }
     setLinkUrl(""); setLinkTitle("");
@@ -130,7 +130,7 @@ export const HabitWorkspaceDialog = ({ habitId, habitName, open, onOpenChange }:
     }
     const { error } = await supabase.from("habit_workspace_items").delete().eq("id", item.id);
     if (error) {
-      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      toast({ title: "Delete failed", description: "An unexpected error occurred. Please try again.", variant: "destructive" });
       return;
     }
     setItems(items.filter((i) => i.id !== item.id));
