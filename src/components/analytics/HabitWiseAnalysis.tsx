@@ -182,11 +182,6 @@ export function HabitWiseAnalysis({ habits }: HabitWiseAnalysisProps) {
                 </div>
               )}
 
-              <div className="space-y-3">
-                {sorted.map((s) => (
-                  <div key={s.id} className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
               {[
                 { key: "do" as const, label: "Do's", icon: CheckCircle2, color: "text-success", list: dos },
                 { key: "dont" as const, label: "Don'ts", icon: XCircle, color: "text-destructive", list: donts },
