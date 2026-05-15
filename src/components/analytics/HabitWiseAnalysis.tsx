@@ -95,6 +95,14 @@ export function HabitWiseAnalysis({ habits }: HabitWiseAnalysisProps) {
     });
   }, [habits, records, range]);
 
+  const dos = useMemo(
+    () => stats.filter((s) => s.type === "do").sort((a, b) => b.successRate - a.successRate),
+    [stats]
+  );
+  const donts = useMemo(
+    () => stats.filter((s) => s.type === "dont").sort((a, b) => b.successRate - a.successRate),
+    [stats]
+  );
   const sorted = useMemo(
     () => [...stats].sort((a, b) => b.successRate - a.successRate),
     [stats]
