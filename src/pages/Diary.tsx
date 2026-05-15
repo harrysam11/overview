@@ -96,7 +96,7 @@ const Diary = () => {
       .from("diary_entries")
       .update(patch)
       .eq("id", selected.id);
-    if (error) toast({ title: "Save failed", description: error.message, variant: "destructive" });
+    if (error) { console.error(error); toast({ title: "Save failed", description: "Could not save entry. Please try again.", variant: "destructive" }); }
     else setEntries((prev) => prev.map((e) => (e.id === selected.id ? { ...e, ...patch } : e)));
     setSaving(false);
   }, [selected, toast]);
