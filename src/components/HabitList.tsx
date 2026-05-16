@@ -25,6 +25,7 @@ interface HabitListProps {
   onAddHabit: (name: string, type: "do" | "dont") => void;
   onDeleteHabit: (habitId: string) => void;
   onUpdateHabitNotes: (habitId: string, notes: string) => void;
+  onUpdateHabitName: (habitId: string, name: string) => void;
 }
 
 export const HabitList = ({
