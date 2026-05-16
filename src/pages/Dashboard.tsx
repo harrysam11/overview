@@ -561,6 +561,7 @@ const Dashboard = () => {
               onAddHabit={handleAddHabit}
               onDeleteHabit={handleDeleteHabit}
               onUpdateHabitNotes={handleUpdateHabitNotes}
+              onUpdateHabitName={handleUpdateHabitName}
             />
 
             <JournalEntry
