@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, Plus, Trash2, FileText, FolderOpen } from "lucide-react";
+import { Check, X, Plus, Trash2, FileText, FolderOpen, Pencil } from "lucide-react";
 import { HabitWorkspaceDialog } from "@/components/workspace/HabitWorkspaceDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ interface HabitListProps {
   onAddHabit: (name: string, type: "do" | "dont") => void;
   onDeleteHabit: (habitId: string) => void;
   onUpdateHabitNotes: (habitId: string, notes: string) => void;
+  onUpdateHabitName: (habitId: string, name: string) => void;
 }
 
 export const HabitList = ({
@@ -34,6 +35,7 @@ export const HabitList = ({
   onAddHabit,
   onDeleteHabit,
   onUpdateHabitNotes,
+  onUpdateHabitName,
 }: HabitListProps) => {
   const [newHabitName, setNewHabitName] = useState("");
   const [habitType, setHabitType] = useState<"do" | "dont">("do");
@@ -41,6 +43,9 @@ export const HabitList = ({
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [notesContent, setNotesContent] = useState("");
   const [workspaceHabit, setWorkspaceHabit] = useState<Habit | null>(null);
+  const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [editedName, setEditedName] = useState("");
   const { toast } = useToast();
 
   const openNotesDialog = (habit: Habit) => {
@@ -65,6 +70,29 @@ export const HabitList = ({
       setSelectedHabit(null);
       setNotesContent("");
     }
+  };
+
+  const openEditNameDialog = (habit: Habit) => {
+    setEditingHabit(habit);
+    setEditedName(habit.name);
+    setEditNameDialogOpen(true);
+  };
+
+  const handleSaveName = () => {
+    if (!editingHabit) return;
+    const validation = habitNameSchema.safeParse(editedName.trim());
+    if (!validation.success) {
+      toast({
+        title: "Invalid habit name",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+    onUpdateHabitName(editingHabit.id, validation.data);
+    setEditNameDialogOpen(false);
+    setEditingHabit(null);
+    setEditedName("");
   };
 
   const dos = habits.filter((h) => h.type === "do" && h.is_active);
@@ -168,6 +196,15 @@ export const HabitList = ({
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => openEditNameDialog(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                  title="Edit name"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openNotesDialog(habit)}
                   className="text-muted-foreground hover:text-primary"
                 >
@@ -232,6 +269,15 @@ export const HabitList = ({
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => openEditNameDialog(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                  title="Edit name"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openNotesDialog(habit)}
                   className="text-muted-foreground hover:text-primary"
                 >
@@ -290,6 +336,30 @@ export const HabitList = ({
         open={!!workspaceHabit}
         onOpenChange={(o) => !o && setWorkspaceHabit(null)}
       />
+
+      <Dialog open={editNameDialogOpen} onOpenChange={setEditNameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Habit Name</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSaveName()}
+              placeholder="Habit name"
+              maxLength={100}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditNameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveName}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
