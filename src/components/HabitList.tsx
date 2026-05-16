@@ -269,6 +269,15 @@ export const HabitList = ({
                 <Button
                   variant="ghost"
                   size="icon"
+                  onClick={() => openEditNameDialog(habit)}
+                  className="text-muted-foreground hover:text-primary"
+                  title="Edit name"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => openNotesDialog(habit)}
                   className="text-muted-foreground hover:text-primary"
                 >
