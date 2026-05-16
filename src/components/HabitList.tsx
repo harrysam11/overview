@@ -72,6 +72,29 @@ export const HabitList = ({
     }
   };
 
+  const openEditNameDialog = (habit: Habit) => {
+    setEditingHabit(habit);
+    setEditedName(habit.name);
+    setEditNameDialogOpen(true);
+  };
+
+  const handleSaveName = () => {
+    if (!editingHabit) return;
+    const validation = habitNameSchema.safeParse(editedName.trim());
+    if (!validation.success) {
+      toast({
+        title: "Invalid habit name",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      return;
+    }
+    onUpdateHabitName(editingHabit.id, validation.data);
+    setEditNameDialogOpen(false);
+    setEditingHabit(null);
+    setEditedName("");
+  };
+
   const dos = habits.filter((h) => h.type === "do" && h.is_active);
   const donts = habits.filter((h) => h.type === "dont" && h.is_active);
 
