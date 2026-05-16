@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, X, Plus, Trash2, FileText, FolderOpen } from "lucide-react";
+import { Check, X, Plus, Trash2, FileText, FolderOpen, Pencil } from "lucide-react";
 import { HabitWorkspaceDialog } from "@/components/workspace/HabitWorkspaceDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
