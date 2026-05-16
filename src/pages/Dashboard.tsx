@@ -295,6 +295,24 @@ const Dashboard = () => {
     }
   };
 
+  const handleUpdateHabitName = async (habitId: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from("habits")
+        .update({ name })
+        .eq("id", habitId);
+
+      if (error) throw error;
+      setHabits(habits.map((h) => h.id === habitId ? { ...h, name } : h));
+      toast({ title: "Habit renamed successfully!" });
+    } catch (error: any) {
+      toast({
+        description: "Failed to rename habit. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUpdateHabitNotes = async (habitId: string, notes: string) => {
     try {
       const { error } = await supabase
