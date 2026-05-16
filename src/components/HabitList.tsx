@@ -336,6 +336,30 @@ export const HabitList = ({
         open={!!workspaceHabit}
         onOpenChange={(o) => !o && setWorkspaceHabit(null)}
       />
+
+      <Dialog open={editNameDialogOpen} onOpenChange={setEditNameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Habit Name</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSaveName()}
+              placeholder="Habit name"
+              maxLength={100}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditNameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveName}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
