@@ -46,12 +46,6 @@ export const HabitList = ({
   const [editNameDialogOpen, setEditNameDialogOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [editedName, setEditedName] = useState("");
-  const [newHabitName, setNewHabitName] = useState("");
-  const [habitType, setHabitType] = useState<"do" | "dont">("do");
-  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
-  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
-  const [notesContent, setNotesContent] = useState("");
-  const [workspaceHabit, setWorkspaceHabit] = useState<Habit | null>(null);
   const { toast } = useToast();
 
   const openNotesDialog = (habit: Habit) => {
