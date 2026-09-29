@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import LifeOS from "./pages/LifeOS";
 import Social from "./pages/Social";
 import IdeasBoard from "./pages/IdeasBoard";
 import WeeklyPlanner from "./pages/WeeklyPlanner";
@@ -29,7 +30,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<LifeOS />} />
+            <Route path="/habits" element={<Dashboard />} />
             <Route path="/social" element={<Social />} />
             <Route path="/ideas" element={<IdeasBoard />} />
             <Route path="/planner" element={<WeeklyPlanner />} />

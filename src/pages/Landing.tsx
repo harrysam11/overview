@@ -31,8 +31,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const features = [
   {
     icon: ListTodo,
-    title: "Habit Tracking",
-    description: "Build daily habits with smart point-based scoring and instant progress feedback.",
+      title: "Habit Tracking",
+      description: "Build daily habits with smart point-based scoring and instant progress feedback.",
     category: "Core",
   },
   {
@@ -126,6 +126,12 @@ const features = [
     category: "Platform",
   },
   {
+    icon: BriefcaseBusiness,
+    title: "LifeOS Command Center",
+    description: "Bring tasks, focus, projects, finance, health, and learning into one clear daily view.",
+    category: "LifeOS",
+  },
+  {
     icon: Shield,
     title: "Privacy & Security",
     description: "Row-level security, server-validated awards, and protected channels by default.",
@@ -139,7 +145,7 @@ const features = [
   },
 ];
 
-const categories = ["Core", "Reflection", "Planning", "Gamification", "Social", "Insights", "Platform"];
+const categories = ["Core", "Reflection", "Planning", "Gamification", "Social", "Insights", "Platform", "LifeOS"];
 
 const Landing = () => {
   const navigate = useNavigate();
