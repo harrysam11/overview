@@ -1,3 +1,3 @@
 # Roadmap
 
-- [ ] Evolve HabitFlow into a practical LifeOS experience
+- [x] Evolve HabitFlow into a practical LifeOS experience
