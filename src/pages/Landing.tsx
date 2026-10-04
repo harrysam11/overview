@@ -25,6 +25,7 @@ import {
   StickyNote,
   Map,
   ListTodo,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
