@@ -3,7 +3,7 @@ import { format, subDays, subMonths, startOfMonth, endOfMonth, startOfYear, endO
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
+import { getHabitStore } from '@/lib/data/habitStore';
 import { BarChart3, TrendingUp } from 'lucide-react';
 
 interface Habit {
@@ -40,22 +40,14 @@ export function AnalyticsCharts({ habits }: AnalyticsChartsProps) {
     }
 
     try {
+      const store = await getHabitStore();
       // Load last 7 days for daily chart
       const today = new Date();
       const sevenDaysAgo = subDays(today, 6);
       const days = eachDayOfInterval({ start: sevenDaysAgo, end: today });
 
-      const { data: dailyRecords } = await supabase
-        .from('daily_records')
-        .select('*')
-        .gte('record_date', format(sevenDaysAgo, 'yyyy-MM-dd'))
-        .lte('record_date', format(today, 'yyyy-MM-dd'));
-
-      const { data: dailyJournals } = await supabase
-        .from('journal_entries')
-        .select('entry_date')
-        .gte('entry_date', format(sevenDaysAgo, 'yyyy-MM-dd'))
-        .lte('entry_date', format(today, 'yyyy-MM-dd'));
+      const dailyRecords = await store.listRecords(format(sevenDaysAgo, 'yyyy-MM-dd'), format(today, 'yyyy-MM-dd'));
+      const dailyJournals = (await store.listJournalDates(format(sevenDaysAgo, 'yyyy-MM-dd'), format(today, 'yyyy-MM-dd'))).map((entry_date) => ({ entry_date }));
 
       const dailyChartData = days.map(day => {
         const dateStr = format(day, 'yyyy-MM-dd');
@@ -84,17 +76,8 @@ export function AnalyticsCharts({ habits }: AnalyticsChartsProps) {
       const twelveMonthsAgo = subMonths(today, 11);
       const months = eachMonthOfInterval({ start: twelveMonthsAgo, end: today });
 
-      const { data: monthlyRecords } = await supabase
-        .from('daily_records')
-        .select('*')
-        .gte('record_date', format(startOfMonth(twelveMonthsAgo), 'yyyy-MM-dd'))
-        .lte('record_date', format(endOfMonth(today), 'yyyy-MM-dd'));
-
-      const { data: monthlyJournals } = await supabase
-        .from('journal_entries')
-        .select('entry_date')
-        .gte('entry_date', format(startOfMonth(twelveMonthsAgo), 'yyyy-MM-dd'))
-        .lte('entry_date', format(endOfMonth(today), 'yyyy-MM-dd'));
+      const monthlyRecords = await store.listRecords(format(startOfMonth(twelveMonthsAgo), 'yyyy-MM-dd'), format(endOfMonth(today), 'yyyy-MM-dd'));
+      const monthlyJournals = (await store.listJournalDates(format(startOfMonth(twelveMonthsAgo), 'yyyy-MM-dd'), format(endOfMonth(today), 'yyyy-MM-dd'))).map((entry_date) => ({ entry_date }));
 
       const monthlyChartData = months.map(month => {
         const monthStart = format(startOfMonth(month), 'yyyy-MM-dd');
@@ -126,17 +109,8 @@ export function AnalyticsCharts({ habits }: AnalyticsChartsProps) {
       const yearStart = startOfYear(today);
       const yearEnd = endOfYear(today);
 
-      const { data: yearRecords } = await supabase
-        .from('daily_records')
-        .select('*')
-        .gte('record_date', format(yearStart, 'yyyy-MM-dd'))
-        .lte('record_date', format(yearEnd, 'yyyy-MM-dd'));
-
-      const { data: yearJournals } = await supabase
-        .from('journal_entries')
-        .select('entry_date')
-        .gte('entry_date', format(yearStart, 'yyyy-MM-dd'))
-        .lte('entry_date', format(yearEnd, 'yyyy-MM-dd'));
+      const yearRecords = await store.listRecords(format(yearStart, 'yyyy-MM-dd'), format(yearEnd, 'yyyy-MM-dd'));
+      const yearJournals = (await store.listJournalDates(format(yearStart, 'yyyy-MM-dd'), format(yearEnd, 'yyyy-MM-dd'))).map((entry_date) => ({ entry_date }));
 
       const yearMonths = eachMonthOfInterval({ start: yearStart, end: today });
       const yearlyChartData = yearMonths.map(month => {
