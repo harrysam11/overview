@@ -16,8 +16,9 @@ export interface AppShortcut {
 export const getFaviconUrl = (url: string): string => {
   try {
     const urlObj = new URL(url);
-    // Use Google's favicon service for reliable favicon detection
-    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
+    // No third-party favicon lookup (privacy): validate the URL only; the UI shows a local initial.
+    void urlObj;
+    return null;
   } catch {
     return "";
   }

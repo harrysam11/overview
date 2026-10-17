@@ -2,6 +2,10 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { isLocalMode, requestPersistentStorage } from "./lib/appMode";
+
+// Local mode: ask the browser not to evict on-device data (best effort, may be declined).
+if (isLocalMode) void requestPersistentStorage();
 
 // PWA: Guard against registering service worker in iframes / preview hosts
 const isInIframe = (() => {

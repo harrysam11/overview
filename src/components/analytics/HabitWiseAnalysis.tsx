@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
+import { getHabitStore } from "@/lib/data/habitStore";
 import { CheckCircle2, XCircle, Target, TrendingUp, TrendingDown } from "lucide-react";
 
 interface Habit {
@@ -46,11 +46,7 @@ export function HabitWiseAnalysis({ habits }: HabitWiseAnalysisProps) {
       try {
         const today = new Date();
         const start = subDays(today, 89); // load enough for the largest range
-        const { data } = await supabase
-          .from("daily_records")
-          .select("habit_id, record_date, completed")
-          .gte("record_date", format(start, "yyyy-MM-dd"))
-          .lte("record_date", format(today, "yyyy-MM-dd"));
+        const data = await (await getHabitStore()).listRecords(format(start, "yyyy-MM-dd"), format(today, "yyyy-MM-dd"));
         setRecords(data || []);
       } catch (err) {
         console.error("Error loading habit-wise analysis:", err);

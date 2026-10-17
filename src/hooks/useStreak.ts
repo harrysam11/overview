@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format, subDays, parseISO, isAfter, startOfDay } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
+import { getHabitStore } from "@/lib/data/habitStore";
 
 interface Habit {
   id: string;
@@ -58,23 +58,12 @@ export const useStreak = (habits: Habit[]) => {
       const startDate = format(subDays(today, lookbackDays), "yyyy-MM-dd");
       const endDate = format(subDays(today, 1), "yyyy-MM-dd"); // Start from yesterday
 
-      // Fetch all records for the lookback period
-      const { data: recordsData, error: recordsError } = await supabase
-        .from("daily_records")
-        .select("*")
-        .gte("record_date", startDate)
-        .lte("record_date", endDate);
-
-      if (recordsError) throw recordsError;
-
-      // Fetch all journal entries for the lookback period
-      const { data: journalData, error: journalError } = await supabase
-        .from("journal_entries")
-        .select("entry_date")
-        .gte("entry_date", startDate)
-        .lte("entry_date", endDate);
-
-      if (journalError) throw journalError;
+      const store = await getHabitStore();
+      const [recordsData, journalDates] = await Promise.all([
+        store.listRecords(startDate, endDate),
+        store.listJournalDates(startDate, endDate),
+      ]);
+      const journalData = journalDates.map((entry_date) => ({ entry_date }));
 
       const journals = new Set<string>(
         (journalData || []).map((j) => j.entry_date)

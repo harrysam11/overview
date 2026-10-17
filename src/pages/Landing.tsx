@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { isLocalMode } from "@/lib/appMode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -150,12 +150,18 @@ const categories = ["Core", "Reflection", "Planning", "Gamification", "Social", 
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [authed, setAuthed] = useState(false);
+  // Local mode has no accounts: the app is always open on this device.
+  const [authed, setAuthed] = useState(isLocalMode);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setAuthed(!!session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setAuthed(!!session));
-    return () => subscription.unsubscribe();
+    if (isLocalMode) return;
+    let unsubscribe = () => {};
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data: { session } }) => setAuthed(!!session));
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setAuthed(!!session));
+      unsubscribe = () => subscription.unsubscribe();
+    });
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -208,7 +214,7 @@ const Landing = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button size="lg" onClick={() => navigate(authed ? "/dashboard" : "/auth")} className="gap-2">
-                {authed ? "Open Dashboard" : "Get Started Free"}
+                {authed ? (isLocalMode ? "Open LifeOS" : "Open Dashboard") : "Get Started Free"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
               <Button size="lg" variant="outline" asChild>
@@ -345,7 +351,7 @@ const Landing = () => {
               Join HabitFlow and turn small daily wins into a life-changing routine.
             </p>
             <Button size="lg" onClick={() => navigate(authed ? "/dashboard" : "/auth")} className="gap-2">
-              {authed ? "Go to Dashboard" : "Create your free account"}
+              {authed ? (isLocalMode ? "Open LifeOS" : "Go to Dashboard") : "Create your free account"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardContent>
