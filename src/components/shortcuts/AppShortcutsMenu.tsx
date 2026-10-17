@@ -198,7 +198,7 @@ export const AppShortcutsMenu = () => {
                       className="flex items-center gap-3 flex-1 min-w-0 text-left"
                     >
                       <div className="w-8 h-8 rounded-full bg-background border flex items-center justify-center shrink-0 overflow-hidden">
-                        {shortcut.favicon_url ? (
+                        {false && shortcut.favicon_url ? (
                           <img
                             src={shortcut.favicon_url}
                             alt={`${shortcut.name} favicon`}

@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Check, X, Plus, Trash2, FileText, FolderOpen, Pencil } from "lucide-react";
-import { HabitWorkspaceDialog } from "@/components/workspace/HabitWorkspaceDialog";
+import { isLocalMode } from "@/lib/appMode";
+
+// Workspace uses cloud file storage; load it only in cloud mode.
+const HabitWorkspaceDialog = lazy(() =>
+  import("@/components/workspace/HabitWorkspaceDialog").then((m) => ({ default: m.HabitWorkspaceDialog })),
+);
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -184,15 +189,17 @@ export const HabitList = ({
                 </span>
               </label>
               <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setWorkspaceHabit(habit)}
-                  className="text-muted-foreground hover:text-primary"
-                  title="Workspace"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
+                {!isLocalMode && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setWorkspaceHabit(habit)}
+                    className="text-muted-foreground hover:text-primary"
+                    title="Workspace"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -257,15 +264,17 @@ export const HabitList = ({
                 </span>
               </label>
               <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setWorkspaceHabit(habit)}
-                  className="text-muted-foreground hover:text-primary"
-                  title="Workspace"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
+                {!isLocalMode && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setWorkspaceHabit(habit)}
+                    className="text-muted-foreground hover:text-primary"
+                    title="Workspace"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -330,12 +339,16 @@ export const HabitList = ({
         </DialogContent>
       </Dialog>
 
-      <HabitWorkspaceDialog
-        habitId={workspaceHabit?.id ?? null}
-        habitName={workspaceHabit?.name ?? ""}
-        open={!!workspaceHabit}
-        onOpenChange={(o) => !o && setWorkspaceHabit(null)}
-      />
+      {!isLocalMode && workspaceHabit && (
+        <Suspense fallback={null}>
+          <HabitWorkspaceDialog
+            habitId={workspaceHabit.id}
+            habitName={workspaceHabit.name}
+            open={!!workspaceHabit}
+            onOpenChange={(o) => !o && setWorkspaceHabit(null)}
+          />
+        </Suspense>
+      )}
 
       <Dialog open={editNameDialogOpen} onOpenChange={setEditNameDialogOpen}>
         <DialogContent>

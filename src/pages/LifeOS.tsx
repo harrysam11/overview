@@ -31,7 +31,9 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useStreak } from "@/hooks/useStreak";
-import { supabase } from "@/integrations/supabase/client";
+import { getHabitStore } from "@/lib/data/habitStore";
+import { isLocalMode } from "@/lib/appMode";
+import { LocalModeBadge } from "@/components/LocalModeBadge";
 
 type LocalTask = { id: string; title: string; done: boolean };
 type LocalProject = { id: string; title: string; area: string };
@@ -86,17 +88,10 @@ const LifeOS = () => {
   }, [projects]);
 
   useEffect(() => {
-    supabase
-      .from("habits")
-      .select("id, type")
-      .eq("is_active", true)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Unable to load habits for LifeOS", error);
-          return;
-        }
-        setHabits((data as { id: string; type: "do" | "dont" }[]) || []);
-      });
+    getHabitStore()
+      .then((store) => store.listActiveHabits())
+      .then((data) => setHabits(data.map(({ id, type }) => ({ id, type }))))
+      .catch((error) => console.error("Unable to load habits for LifeOS", error));
   }, []);
 
   const { currentStreak, longestStreak } = useStreak(habits);
@@ -140,7 +135,7 @@ const LifeOS = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/roadmap")}>Goals</Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/diary")}>Diary</Button>
           </nav>
-          <div className="flex items-center gap-2"><ThemeToggle /><Button variant="outline" size="sm" onClick={() => navigate("/habits")}>Open tracker <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button></div>
+          <div className="flex items-center gap-2">{isLocalMode && <LocalModeBadge />}<ThemeToggle /><Button variant="outline" size="sm" onClick={() => navigate("/habits")}>Open tracker <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button></div>
         </div>
       </header>
 
@@ -189,7 +184,7 @@ const LifeOS = () => {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <Card><CardHeader className="flex-row items-start justify-between space-y-0"><div><CardTitle>Projects in motion</CardTitle><CardDescription>A simple view of what you are building.</CardDescription></div><Button variant="ghost" size="sm" onClick={() => navigate("/roadmap")}>Open goals <Target className="ml-2 h-4 w-4" /></Button></CardHeader><CardContent className="space-y-3">{projects.map((project) => <div key={project.id} className="flex items-center gap-3 rounded-md border border-border p-3"><span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted"><BriefcaseBusiness className="h-4 w-4" /></span><span className="flex-1"><span className="block text-sm font-medium">{project.title}</span><span className="block text-xs text-muted-foreground">{project.area}</span></span><BarChart3 className="h-4 w-4 text-muted-foreground" /></div>)}<div className="flex gap-2 pt-1"><Input value={newProject} onChange={(event) => setNewProject(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") addProject(); }} placeholder="Add a project" aria-label="Add a project" /><Button size="icon" variant="outline" onClick={addProject} aria-label="Add project"><Plus className="h-4 w-4" /></Button></div></CardContent></Card>
-          <Card><CardHeader><CardTitle>Keep the whole picture close</CardTitle><CardDescription>Jump into the tools that already help you live intentionally.</CardDescription></CardHeader><CardContent><Tabs defaultValue="reflect"><TabsList className="grid w-full grid-cols-3"><TabsTrigger value="reflect">Reflect</TabsTrigger><TabsTrigger value="plan">Plan</TabsTrigger><TabsTrigger value="connect">Connect</TabsTrigger></TabsList><TabsContent value="reflect" className="space-y-3"><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/diary")}>Universal diary <BookOpen className="h-4 w-4" /></Button><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/habits")}>Habit insights <BarChart3 className="h-4 w-4" /></Button></TabsContent><TabsContent value="plan" className="space-y-3"><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/planner")}>Weekly planner <CalendarDays className="h-4 w-4" /></Button><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/roadmap")}>Goal roadmap <Target className="h-4 w-4" /></Button></TabsContent><TabsContent value="connect" className="space-y-3"><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/social")}>Friends and groups <Users className="h-4 w-4" /></Button><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/ideas")}>Ideas board <Lightbulb className="h-4 w-4" /></Button></TabsContent></Tabs></CardContent></Card>
+          <Card><CardHeader><CardTitle>Keep the whole picture close</CardTitle><CardDescription>Jump into the tools that already help you live intentionally.</CardDescription></CardHeader><CardContent><Tabs defaultValue="reflect"><TabsList className={`grid w-full ${isLocalMode ? "grid-cols-2" : "grid-cols-3"}`}><TabsTrigger value="reflect">Reflect</TabsTrigger><TabsTrigger value="plan">Plan</TabsTrigger>{!isLocalMode && <TabsTrigger value="connect">Connect</TabsTrigger>}</TabsList><TabsContent value="reflect" className="space-y-3"><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/diary")}>Universal diary <BookOpen className="h-4 w-4" /></Button><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/habits")}>Habit insights <BarChart3 className="h-4 w-4" /></Button></TabsContent><TabsContent value="plan" className="space-y-3"><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/planner")}>Weekly planner <CalendarDays className="h-4 w-4" /></Button><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/roadmap")}>Goal roadmap <Target className="h-4 w-4" /></Button></TabsContent>{!isLocalMode && (<TabsContent value="connect" className="space-y-3"><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/social")}>Friends and groups <Users className="h-4 w-4" /></Button><Button variant="outline" className="w-full justify-between" onClick={() => navigate("/ideas")}>Ideas board <Lightbulb className="h-4 w-4" /></Button></TabsContent>)}</Tabs></CardContent></Card>
         </div>
       </main>
     </div>
