@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /** Bump when the local IndexedDB layout or backup format changes; add an upgrade step in localDb.ts. */
-export const LOCAL_SCHEMA_VERSION = 1;
+export const LOCAL_SCHEMA_VERSION = 2;
 export const BACKUP_APP_ID = "habitflow-lifeos";
 
 export const LIMITS = {
@@ -12,6 +12,9 @@ export const LIMITS = {
   habitName: 100,
   habitNotes: 2_000,
   journalContent: 5_000,
+  taskTitle: 200,
+  maxTasks: 50_000,
+  maxProjects: 10_000,
 } as const;
 
 const dateString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date (expected YYYY-MM-DD)");
@@ -45,9 +48,42 @@ export const localJournalEntrySchema = z.object({
   updated_at: timestamp,
 });
 
+export const localTaskSchema = z.object({
+  id,
+  title: z.string().trim().min(1).max(LIMITS.taskTitle),
+  done: z.boolean(),
+});
+
+export const localProjectSchema = z.object({
+  id,
+  title: z.string().trim().min(1).max(LIMITS.taskTitle),
+  area: z.string().trim().min(1).max(100),
+});
+
 export type LocalHabit = z.infer<typeof localHabitSchema>;
 export type LocalDailyRecord = z.infer<typeof localDailyRecordSchema>;
 export type LocalJournalEntry = z.infer<typeof localJournalEntrySchema>;
+export type LocalTask = z.infer<typeof localTaskSchema>;
+export type LocalProject = z.infer<typeof localProjectSchema>;
+
+export const localVaultDataSchema = z.object({
+  habits: z.array(localHabitSchema).max(LIMITS.maxHabits),
+  daily_records: z.array(localDailyRecordSchema).max(LIMITS.maxRecords),
+  journal_entries: z.array(localJournalEntrySchema).max(LIMITS.maxJournalEntries),
+  tasks: z.array(localTaskSchema).max(LIMITS.maxTasks),
+  projects: z.array(localProjectSchema).max(LIMITS.maxProjects),
+});
+
+export type LocalVaultData = z.infer<typeof localVaultDataSchema>;
+
+export const encryptedPayloadSchema = z.object({
+  version: z.literal(1),
+  kdf: z.literal("PBKDF2-SHA256"),
+  iterations: z.number().int().min(310_000).max(1_000_000),
+  salt: z.string().min(20).max(64),
+  iv: z.string().min(12).max(32),
+  ciphertext: z.string().min(16).max(30_000_000),
+});
 
 export const backupSchema = z.object({
   app: z.literal(BACKUP_APP_ID),
@@ -57,6 +93,8 @@ export const backupSchema = z.object({
     habits: z.array(localHabitSchema).max(LIMITS.maxHabits),
     daily_records: z.array(localDailyRecordSchema).max(LIMITS.maxRecords),
     journal_entries: z.array(localJournalEntrySchema).max(LIMITS.maxJournalEntries),
+    tasks: z.array(localTaskSchema).max(LIMITS.maxTasks),
+    projects: z.array(localProjectSchema).max(LIMITS.maxProjects),
   }),
 });
 

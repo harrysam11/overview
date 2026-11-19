@@ -7,3 +7,4 @@
 - Backups are validated by `src/lib/local/backup.ts` (version, size, references) and imported in a single transaction — so a bad file can never partially overwrite data.
 - No third-party network lookups (favicons, remote images, fonts) in local mode — privacy and offline use.
 - Unit tests use Vitest + fake-indexeddb (`npm test`) next to the code they cover.
+- Local personal data is stored only as a passphrase-derived AES-GCM encrypted vault; keep the non-extractable key in memory only and migrate legacy plaintext only after ciphertext commits atomically, so lock/restart never leaves an unlock secret beside the data.

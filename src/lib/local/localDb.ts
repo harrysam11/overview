@@ -1,6 +1,16 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { LOCAL_SCHEMA_VERSION, type LocalDailyRecord, type LocalHabit, type LocalJournalEntry } from "./schema";
 
+export interface EncryptedVaultRecord {
+  id: "primary";
+  version: 1;
+  kdf: "PBKDF2-SHA256";
+  iterations: number;
+  salt: string;
+  iv: string;
+  ciphertext: string;
+}
+
 export const LOCAL_DB_NAME = "habitflow-local";
 
 export interface LocalDbSchema extends DBSchema {
@@ -12,6 +22,7 @@ export interface LocalDbSchema extends DBSchema {
   };
   journal_entries: { key: string; value: LocalJournalEntry; indexes: { by_date: string } };
   meta: { key: string; value: unknown };
+  vault: { key: string; value: EncryptedVaultRecord };
 }
 
 export class LocalStoreError extends Error {
@@ -39,6 +50,9 @@ export const getLocalDb = () => {
           const journal = db.createObjectStore("journal_entries", { keyPath: "id" });
           journal.createIndex("by_date", "entry_date", { unique: true });
           db.createObjectStore("meta");
+        }
+        if (oldVersion < 2) {
+          db.createObjectStore("vault", { keyPath: "id" });
         }
       },
       blocked() {
