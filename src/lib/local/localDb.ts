@@ -4,6 +4,7 @@ import { LOCAL_SCHEMA_VERSION, type LocalDailyRecord, type LocalHabit, type Loca
 export interface EncryptedVaultRecord {
   id: "primary";
   version: 1;
+  revision: number;
   kdf: "PBKDF2-SHA256";
   iterations: number;
   salt: string;

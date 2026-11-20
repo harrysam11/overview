@@ -1,11 +1,12 @@
-import { getLocalDb, LocalStoreError, type EncryptedVaultRecord } from "./localDb";
+import { z } from "zod";
+import { getLocalDb, LocalStoreError } from "./localDb";
 import {
   BACKUP_APP_ID,
+  backupSchema,
   encryptedPayloadSchema,
   localProjectSchema,
   localTaskSchema,
   localVaultDataSchema,
-  LOCAL_SCHEMA_VERSION,
   type LocalBackup,
   type LocalVaultData,
 } from "./schema";
@@ -23,20 +24,9 @@ export class LocalVaultError extends Error {
   }
 }
 
-type BackupEnvelope = {
-  app: typeof BACKUP_APP_ID;
-  kind: typeof BACKUP_KIND;
-  version: 1;
-  kdf: "PBKDF2-SHA256";
-  iterations: number;
-  salt: string;
-  iv: string;
-  ciphertext: string;
-};
-
 const backupEnvelopeSchema = encryptedPayloadSchema.extend({
-  app: (await import("zod")).z.literal(BACKUP_APP_ID),
-  kind: (await import("zod")).z.literal(BACKUP_KIND),
+  app: z.literal(BACKUP_APP_ID),
+  kind: z.literal(BACKUP_KIND),
 });
 
 let activeKey: CryptoKey | null = null;
@@ -62,13 +52,13 @@ const randomBytes = (length: number) => {
   return value;
 };
 
-const deriveKey = async (passphrase: string, salt: Uint8Array): Promise<CryptoKey> => {
+const deriveKey = async (passphrase: string, salt: Uint8Array, iterations = PBKDF2_ITERATIONS): Promise<CryptoKey> => {
   if (!globalThis.crypto?.subtle) {
     throw new LocalVaultError("Secure encryption is unavailable. Open HabitFlow on localhost or a secure local connection.");
   }
   const material = await crypto.subtle.importKey("raw", encoder.encode(passphrase.normalize("NFKC")), "PBKDF2", false, ["deriveKey"]);
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
     material,
     { name: "AES-GCM", length: 256 },
     false,
@@ -89,10 +79,10 @@ const encryptJson = async (value: unknown, key: CryptoKey, salt: Uint8Array) => 
   };
 };
 
-const decryptJson = async (payload: { salt: string; iv: string; ciphertext: string }, passphrase: string) => {
+const decryptJson = async (payload: { salt: string; iv: string; ciphertext: string; iterations: number }, passphrase: string) => {
   try {
     const salt = fromBase64(payload.salt);
-    const key = await deriveKey(passphrase, salt);
+    const key = await deriveKey(passphrase, salt, payload.iterations);
     const plaintext = await crypto.subtle.decrypt(
       { name: "AES-GCM", iv: fromBase64(payload.iv) },
       key,
@@ -104,8 +94,6 @@ const decryptJson = async (payload: { salt: string; iv: string; ciphertext: stri
     throw new LocalVaultError("Passphrase is incorrect or the encrypted data is damaged.", error);
   }
 };
-
-const emptyVaultData = (): LocalVaultData => ({ habits: [], daily_records: [], journal_entries: [], tasks: [], projects: [] });
 
 const readLegacyData = async (): Promise<LocalVaultData> => {
   const db = await getLocalDb();
@@ -131,10 +119,24 @@ const readLegacyData = async (): Promise<LocalVaultData> => {
   return parsed.data;
 };
 
-const clearLegacyData = async () => {
+const writeCiphertext = async (data: LocalVaultData, key: CryptoKey, salt: Uint8Array) => {
+  const payload = await encryptJson(data, key, salt);
   const db = await getLocalDb();
-  const tx = db.transaction(["habits", "daily_records", "journal_entries"], "readwrite");
+  await db.put("vault", { id: VAULT_ID, ...payload });
+};
+
+const migrateLegacyDataAtomically = async (data: LocalVaultData, key: CryptoKey, salt: Uint8Array) => {
+  const payload = await encryptJson(data, key, salt);
+  const db = await getLocalDb();
+  const tx = db.transaction(["vault", "habits", "daily_records", "journal_entries"], "readwrite");
+  const vault = tx.objectStore("vault");
+  const existing = await vault.get(VAULT_ID);
+  if (existing) {
+    tx.abort();
+    throw new LocalVaultError("Another tab initialized the secure vault. Reload and unlock it.");
+  }
   await Promise.all([
+    vault.add({ id: VAULT_ID, ...payload, revision: 1 }),
     tx.objectStore("habits").clear(),
     tx.objectStore("daily_records").clear(),
     tx.objectStore("journal_entries").clear(),
@@ -144,14 +146,8 @@ const clearLegacyData = async () => {
     localStorage.removeItem("habitflow-lifeos-tasks");
     localStorage.removeItem("habitflow-lifeos-projects");
   } catch {
-    // IndexedDB is already encrypted; inaccessible legacy localStorage is harmless.
+    // Encrypted task/project copies are already committed; legacy keys can be removed later.
   }
-};
-
-const writeCiphertext = async (data: LocalVaultData, key: CryptoKey, salt: Uint8Array) => {
-  const payload = await encryptJson(data, key, salt);
-  const db = await getLocalDb();
-  await db.put("vault", { id: VAULT_ID, ...payload });
 };
 
 const withMutationLock = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -173,6 +169,15 @@ export const hasEncryptedVault = async () => {
   return Boolean(await db.get("vault", VAULT_ID));
 };
 
+const removeLegacyTaskKeys = () => {
+  try {
+    localStorage.removeItem("habitflow-lifeos-tasks");
+    localStorage.removeItem("habitflow-lifeos-projects");
+  } catch {
+    // The encrypted vault remains authoritative if storage cleanup is blocked.
+  }
+};
+
 export const unlockLocalVault = async (passphrase: string): Promise<void> => {
   if (passphrase.length < 12 || passphrase.length > 1024) {
     throw new LocalVaultError("Use a passphrase between 12 and 1,024 characters.");
@@ -187,7 +192,7 @@ export const unlockLocalVault = async (passphrase: string): Promise<void> => {
     if (!valid.success) throw new LocalVaultError("The encrypted data failed its integrity check.");
     activeKey = decrypted.key;
     activeSalt = decrypted.salt;
-    await clearLegacyData();
+    removeLegacyTaskKeys();
     return;
   }
 
@@ -197,8 +202,7 @@ export const unlockLocalVault = async (passphrase: string): Promise<void> => {
   await withMutationLock(async () => {
     const existing = await db.get("vault", VAULT_ID);
     if (existing) throw new LocalVaultError("Another tab initialized the secure vault. Reload and unlock it.");
-    await writeCiphertext(legacyData, key, salt);
-    await clearLegacyData();
+    await migrateLegacyDataAtomically(legacyData, key, salt);
   });
   activeKey = key;
   activeSalt = salt;
@@ -214,27 +218,50 @@ const requireUnlocked = () => {
   return { key: activeKey, salt: activeSalt };
 };
 
+const decryptVaultRecord = async (record: EncryptedVaultRecord, key: CryptoKey): Promise<LocalVaultData> => {
+  const plaintext = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: fromBase64(record.iv) },
+    key,
+    fromBase64(record.ciphertext),
+  );
+  return localVaultDataSchema.parse(JSON.parse(decoder.decode(plaintext)) as unknown);
+};
+
 export const readVaultData = async (): Promise<LocalVaultData> => {
   const { key } = requireUnlocked();
   const db = await getLocalDb();
   const record = await db.get("vault", VAULT_ID);
   if (!record) throw new LocalVaultError("Encrypted local data could not be found.");
-  const decrypted = await decryptJson(record, "");
-  // The active non-extractable key is used directly below; this branch is replaced before decryption.
-  return localVaultDataSchema.parse(decrypted.value);
+  try {
+    return await decryptVaultRecord(record, key);
+  } catch (error) {
+    throw new LocalVaultError("The encrypted data failed its integrity check.", error);
+  }
 };
 
 export const updateVaultData = async (update: (data: LocalVaultData) => LocalVaultData): Promise<LocalVaultData> => {
   const { key, salt } = requireUnlocked();
   return withMutationLock(async () => {
     const db = await getLocalDb();
-    const record = await db.get("vault", VAULT_ID);
-    if (!record) throw new LocalVaultError("Encrypted local data could not be found.");
-    const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(record.iv) }, key, fromBase64(record.ciphertext));
-    const current = localVaultDataSchema.parse(JSON.parse(decoder.decode(plaintext)) as unknown);
-    const next = localVaultDataSchema.parse(update(current));
-    await writeCiphertext(next, key, salt);
-    return next;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const record = await db.get("vault", VAULT_ID);
+      if (!record) throw new LocalVaultError("Encrypted local data could not be found.");
+      const current = await decryptVaultRecord(record, key);
+      const next = localVaultDataSchema.parse(update(current));
+      const payload = await encryptJson(next, key, salt);
+      const tx = db.transaction("vault", "readwrite");
+      const store = tx.objectStore("vault");
+      const latest = await store.get(VAULT_ID);
+      if (!latest || latest.revision !== record.revision) {
+        tx.abort();
+        try { await tx.done; } catch { /* expected conflict abort */ }
+        continue;
+      }
+      await store.put({ id: VAULT_ID, ...payload, revision: (latest.revision ?? 0) + 1 });
+      await tx.done;
+      return next;
+    }
+    throw new LocalVaultError("Another tab is updating data. Please retry.");
   });
 };
 
@@ -245,6 +272,7 @@ export const exportEncryptedBackup = async (backup: LocalBackup): Promise<string
 };
 
 export const decryptBackupWithPassphrase = async (text: string, passphrase: string): Promise<LocalBackup> => {
+  if (passphrase.length < 12 || passphrase.length > 1024) throw new LocalVaultError("Use a passphrase between 12 and 1,024 characters.");
   let unknownJson: unknown;
   try {
     unknownJson = JSON.parse(text) as unknown;
@@ -254,17 +282,7 @@ export const decryptBackupWithPassphrase = async (text: string, passphrase: stri
   const envelope = backupEnvelopeSchema.safeParse(unknownJson);
   if (!envelope.success) throw new LocalVaultError("This is not an encrypted HabitFlow backup.");
   const decrypted = await decryptJson(envelope.data, passphrase);
-  const data = decrypted.value as Record<string, unknown>;
-  const normalized = {
-    ...data,
-    schema_version: LOCAL_SCHEMA_VERSION,
-    data: {
-      ...(data && typeof data === "object" && "data" in data && data.data && typeof data.data === "object" ? data.data : {}),
-      tasks: data && typeof data === "object" && "data" in data && data.data && typeof data.data === "object" && "tasks" in data.data ? data.data.tasks : [],
-      projects: data && typeof data === "object" && "data" in data && data.data && typeof data.data === "object" && "projects" in data.data ? data.data.projects : [],
-    },
-  };
-  const parsed = (await import("./schema")).backupSchema.safeParse(normalized);
+  const parsed = backupSchema.safeParse(decrypted.value);
   if (!parsed.success) throw new LocalVaultError("Backup content failed validation.", parsed.error);
   return parsed.data;
 };

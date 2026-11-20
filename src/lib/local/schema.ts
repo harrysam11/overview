@@ -2,6 +2,7 @@ import { z } from "zod";
 
 /** Bump when the local IndexedDB layout or backup format changes; add an upgrade step in localDb.ts. */
 export const LOCAL_SCHEMA_VERSION = 2;
+export const BACKUP_SCHEMA_VERSION = 2;
 export const BACKUP_APP_ID = "habitflow-lifeos";
 
 export const LIMITS = {
@@ -78,6 +79,7 @@ export type LocalVaultData = z.infer<typeof localVaultDataSchema>;
 
 export const encryptedPayloadSchema = z.object({
   version: z.literal(1),
+  revision: z.number().int().nonnegative().optional(),
   kdf: z.literal("PBKDF2-SHA256"),
   iterations: z.number().int().min(310_000).max(1_000_000),
   salt: z.string().min(20).max(64),
@@ -87,7 +89,7 @@ export const encryptedPayloadSchema = z.object({
 
 export const backupSchema = z.object({
   app: z.literal(BACKUP_APP_ID),
-  schema_version: z.number().int().positive(),
+  schema_version: z.literal(BACKUP_SCHEMA_VERSION),
   exported_at: z.string(),
   data: z.object({
     habits: z.array(localHabitSchema).max(LIMITS.maxHabits),

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { isLocalMode } from "./lib/appMode";
+import { LocalVaultGate } from "./components/LocalVaultGate";
 import Landing from "./pages/Landing";
 import LifeOS from "./pages/LifeOS";
 import NotFound from "./pages/NotFound";
@@ -74,17 +75,31 @@ const App = () => (
             <OfflineIndicator />
           </Suspense>
         )}
-        <BrowserRouter>
-          <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/dashboard" element={<LifeOS />} />
-              {isLocalMode ? localRoutes : cloudRoutes}
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
+        {isLocalMode ? (
+          <LocalVaultGate>
+            <BrowserRouter>
+              <Suspense fallback={<Loading />}>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/dashboard" element={<LifeOS />} />
+                  {localRoutes}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </LocalVaultGate>
+        ) : (
+          <BrowserRouter>
+            <Suspense fallback={<Loading />}>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/dashboard" element={<LifeOS />} />
+                {cloudRoutes}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        )}
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
