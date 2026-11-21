@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { hasEncryptedVault, lockLocalVault, unlockLocalVault } from "@/lib/local/vault";
 
+export const LOCAL_VAULT_LOCK_EVENT = "habitflow:lock-local-vault";
+
 const IDLE_LOCK_MS = 10 * 60 * 1000;
 
 export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
@@ -44,9 +46,14 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
     };
     const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart", "scroll"];
     events.forEach((event) => window.addEventListener(event, refresh, { passive: true }));
+    window.addEventListener(LOCAL_VAULT_LOCK_EVENT, lock);
+    const onVisibilityChange = () => { if (document.visibilityState === "hidden") lock(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearTimeout(timeout);
       events.forEach((event) => window.removeEventListener(event, refresh));
+      window.removeEventListener(LOCAL_VAULT_LOCK_EVENT, lock);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [lock, unlocked]);
 

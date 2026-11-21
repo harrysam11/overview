@@ -16,6 +16,7 @@ import { useStreak } from "@/hooks/useStreak";
 import { useToast } from "@/hooks/use-toast";
 import { getHabitStore, type DailyRecord, type Habit } from "@/lib/data/habitStore";
 import { calculateDayPoints, maxDayPoints } from "@/lib/habitScoring";
+import { LocalVaultLockButton } from "@/components/LocalVaultLockButton";
 
 const errMsg = (e: unknown, fallback: string) => (e instanceof Error && e.name === "LocalStoreError" ? e.message : fallback);
 
@@ -147,6 +148,7 @@ const LocalHabits = () => {
             <LocalModeBadge />
           </div>
           <div className="flex items-center gap-1">
+            <LocalVaultLockButton />
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} title="LifeOS home"><Home className="h-5 w-5" /></Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/data")} title="Backup & restore"><DatabaseBackup className="h-5 w-5" /></Button>
             <ThemeToggle />

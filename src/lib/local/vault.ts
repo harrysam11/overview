@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getLocalDb, LocalStoreError } from "./localDb";
+import { getLocalDb, LocalStoreError, type EncryptedVaultRecord } from "./localDb";
 import {
   BACKUP_APP_ID,
   backupSchema,
@@ -107,22 +107,18 @@ const readLegacyData = async (): Promise<LocalVaultData> => {
   let tasks: unknown[] = [];
   let projects: unknown[] = [];
   try {
-    const savedTasks = localStorage.getItem("habitflow-lifeos-tasks");
-    const savedProjects = localStorage.getItem("habitflow-lifeos-projects");
-    tasks = savedTasks ? JSON.parse(savedTasks) as unknown[] : [];
-    projects = savedProjects ? JSON.parse(savedProjects) as unknown[] : [];
+    if (typeof localStorage !== "undefined") {
+      const savedTasks = localStorage.getItem("habitflow-lifeos-tasks");
+      const savedProjects = localStorage.getItem("habitflow-lifeos-projects");
+      tasks = savedTasks ? JSON.parse(savedTasks) as unknown[] : [];
+      projects = savedProjects ? JSON.parse(savedProjects) as unknown[] : [];
+    }
   } catch (error) {
     throw new LocalVaultError("Older local tasks or projects could not be read. Existing data was left unchanged.", error);
   }
   const parsed = localVaultDataSchema.safeParse({ habits, daily_records, journal_entries, tasks, projects });
   if (!parsed.success) throw new LocalVaultError("Older local data needs repair before it can be encrypted. Existing data was left unchanged.", parsed.error);
   return parsed.data;
-};
-
-const writeCiphertext = async (data: LocalVaultData, key: CryptoKey, salt: Uint8Array) => {
-  const payload = await encryptJson(data, key, salt);
-  const db = await getLocalDb();
-  await db.put("vault", { id: VAULT_ID, ...payload });
 };
 
 const migrateLegacyDataAtomically = async (data: LocalVaultData, key: CryptoKey, salt: Uint8Array) => {
@@ -143,6 +139,7 @@ const migrateLegacyDataAtomically = async (data: LocalVaultData, key: CryptoKey,
   ]);
   await tx.done;
   try {
+    if (typeof localStorage === "undefined") return;
     localStorage.removeItem("habitflow-lifeos-tasks");
     localStorage.removeItem("habitflow-lifeos-projects");
   } catch {
@@ -171,6 +168,7 @@ export const hasEncryptedVault = async () => {
 
 const removeLegacyTaskKeys = () => {
   try {
+    if (typeof localStorage === "undefined") return;
     localStorage.removeItem("habitflow-lifeos-tasks");
     localStorage.removeItem("habitflow-lifeos-projects");
   } catch {

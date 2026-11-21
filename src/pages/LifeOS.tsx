@@ -34,12 +34,12 @@ import { useStreak } from "@/hooks/useStreak";
 import { getHabitStore } from "@/lib/data/habitStore";
 import { isLocalMode } from "@/lib/appMode";
 import { LocalModeBadge } from "@/components/LocalModeBadge";
+import { useToast } from "@/hooks/use-toast";
+import { LocalVaultError, newId } from "@/lib/local/localDb";
+import { readVaultData, updateVaultData, validateLifeOsEntry } from "@/lib/local/vault";
 
 type LocalTask = { id: string; title: string; done: boolean };
 type LocalProject = { id: string; title: string; area: string };
-
-const TASKS_KEY = "habitflow-lifeos-tasks";
-const PROJECTS_KEY = "habitflow-lifeos-projects";
 
 const areas = [
   { id: "tasks", label: "Tasks", icon: ListTodo, description: "Keep today moving" },
@@ -50,18 +50,11 @@ const areas = [
   { id: "learning", label: "Learning", icon: Brain, description: "Build your edge" },
 ];
 
-const defaultTasks: LocalTask[] = [
-  { id: "task-1", title: "Choose one meaningful win for today", done: false },
-  { id: "task-2", title: "Review your weekly intention", done: true },
-];
-
 const LifeOS = () => {
   const navigate = useNavigate();
-  const [tasks, setTasks] = useState<LocalTask[]>(defaultTasks);
-  const [projects, setProjects] = useState<LocalProject[]>([
-    { id: "project-1", title: "Personal operating system", area: "Life" },
-    { id: "project-2", title: "Next meaningful milestone", area: "Goals" },
-  ]);
+  const { toast } = useToast();
+  const [tasks, setTasks] = useState<LocalTask[]>([]);
+  const [projects, setProjects] = useState<LocalProject[]>([]);
   const [newTask, setNewTask] = useState("");
   const [newProject, setNewProject] = useState("");
   const [habits, setHabits] = useState<{ id: string; type: "do" | "dont" }[]>([]);
@@ -69,23 +62,19 @@ const LifeOS = () => {
   const [focusRunning, setFocusRunning] = useState(false);
 
   useEffect(() => {
-    try {
-      const savedTasks = window.localStorage.getItem(TASKS_KEY);
-      const savedProjects = window.localStorage.getItem(PROJECTS_KEY);
-      if (savedTasks) setTasks(JSON.parse(savedTasks) as LocalTask[]);
-      if (savedProjects) setProjects(JSON.parse(savedProjects) as LocalProject[]);
-    } catch (error) {
-      console.error("Unable to restore LifeOS workspace", error);
-    }
+    let mounted = true;
+    readVaultData()
+      .then((data) => {
+        if (!mounted) return;
+        setTasks(data.tasks);
+        setProjects(data.projects);
+      })
+      .catch((error) => {
+        console.error("Unable to restore LifeOS workspace", error);
+        toast({ description: error instanceof LocalVaultError ? error.message : "Could not load your saved LifeOS data.", variant: "destructive" });
+      });
+    return () => { mounted = false; };
   }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-  }, [projects]);
 
   useEffect(() => {
     getHabitStore()
@@ -100,22 +89,39 @@ const LifeOS = () => {
   const today = format(new Date(), "EEEE, MMMM d");
   const greeting = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
 
-  const addTask = () => {
+  const addTask = async () => {
     const title = newTask.trim();
     if (!title) return;
-    setTasks((current) => [...current, { id: `task-${Date.now()}`, title, done: false }]);
-    setNewTask("");
+    try {
+      const task = validateLifeOsEntry({ id: newId(), title, done: false }, "task");
+      const updated = await updateVaultData((data) => ({ ...data, tasks: [...data.tasks, task] }));
+      setTasks(updated.tasks);
+      setNewTask("");
+    } catch (error) {
+      toast({ description: error instanceof Error ? error.message : "Could not add task.", variant: "destructive" });
+    }
   };
 
-  const addProject = () => {
+  const addProject = async () => {
     const title = newProject.trim();
     if (!title) return;
-    setProjects((current) => [...current, { id: `project-${Date.now()}`, title, area: "Personal" }]);
-    setNewProject("");
+    try {
+      const project = validateLifeOsEntry({ id: newId(), title, area: "Personal" }, "project");
+      const updated = await updateVaultData((data) => ({ ...data, projects: [...data.projects, project] }));
+      setProjects(updated.projects);
+      setNewProject("");
+    } catch (error) {
+      toast({ description: error instanceof Error ? error.message : "Could not add project.", variant: "destructive" });
+    }
   };
 
-  const toggleTask = (id: string) => {
-    setTasks((current) => current.map((task) => task.id === id ? { ...task, done: !task.done } : task));
+  const toggleTask = async (id: string) => {
+    try {
+      const updated = await updateVaultData((data) => ({ ...data, tasks: data.tasks.map((task) => task.id === id ? { ...task, done: !task.done } : task) }));
+      setTasks(updated.tasks);
+    } catch (error) {
+      toast({ description: error instanceof Error ? error.message : "Could not update task.", variant: "destructive" });
+    }
   };
 
   const focusLabel = useMemo(() => focusRunning ? "Focus session active" : "Ready when you are", [focusRunning]);

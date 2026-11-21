@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, Upload, Home, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Download, Upload, Home, ShieldCheck, ShieldAlert, LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -11,14 +13,19 @@ import { LocalModeBadge } from "@/components/LocalModeBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { requestPersistentStorage } from "@/lib/appMode";
-import { backupCounts, exportLocalData, parseBackup, replaceLocalData } from "@/lib/local/backup";
+import { backupCounts, exportLocalData, replaceLocalData } from "@/lib/local/backup";
 import { LIMITS, type LocalBackup } from "@/lib/local/schema";
+import { decryptBackupWithPassphrase, exportEncryptedBackup } from "@/lib/local/vault";
+import { LocalVaultLockButton } from "@/components/LocalVaultLockButton";
 
 const LocalData = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<LocalBackup | null>(null);
+  const [pendingText, setPendingText] = useState<string | null>(null);
+  const [restorePassphrase, setRestorePassphrase] = useState("");
+  const [restoreError, setRestoreError] = useState("");
   const [busy, setBusy] = useState(false);
   const [persisted, setPersisted] = useState<boolean | null>(null);
 
@@ -30,7 +37,8 @@ const LocalData = () => {
     setBusy(true);
     try {
       const backup = await exportLocalData();
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const encrypted = await exportEncryptedBackup(backup);
+      const blob = new Blob([encrypted], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -54,12 +62,28 @@ const LocalData = () => {
       toast({ description: "File is larger than 10 MB.", variant: "destructive" });
       return;
     }
-    const result = parseBackup(await file.text());
-    if (result.ok === false) {
-      toast({ title: "Backup not imported", description: result.error, variant: "destructive" });
-      return;
+    try {
+      setPendingText(await file.text());
+      setPending(null);
+      setRestoreError("");
+    } catch {
+      toast({ title: "Backup not imported", description: "Could not read the selected file.", variant: "destructive" });
     }
-    setPending(result.backup);
+  };
+
+  const previewBackup = async () => {
+    if (!pendingText) return;
+    setBusy(true);
+    setRestoreError("");
+    try {
+      const backup = await decryptBackupWithPassphrase(pendingText, restorePassphrase);
+      setPending(backup);
+      setRestorePassphrase("");
+    } catch (error) {
+      setRestoreError(error instanceof Error ? error.message : "Could not decrypt this backup.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const confirmImport = async () => {
@@ -69,6 +93,7 @@ const LocalData = () => {
       await replaceLocalData(pending);
       toast({ title: "Backup restored" });
       setPending(null);
+      setPendingText(null);
     } catch (e) {
       console.error(e);
       toast({ description: "Import failed. Your existing data was not changed.", variant: "destructive" });
@@ -85,6 +110,7 @@ const LocalData = () => {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3"><span className="font-semibold">Backup &amp; restore</span><LocalModeBadge /></div>
           <div className="flex items-center gap-1">
+            <LocalVaultLockButton />
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} title="LifeOS home"><Home className="h-5 w-5" /></Button>
             <ThemeToggle />
           </div>
@@ -112,7 +138,7 @@ const LocalData = () => {
         <Card>
           <CardHeader>
             <CardTitle>Export</CardTitle>
-            <CardDescription>Download a backup file of your habits, check-ins and journal.</CardDescription>
+            <CardDescription>Download a passphrase-encrypted backup of your habits, check-ins, journal, tasks and projects.</CardDescription>
           </CardHeader>
           <CardContent><Button onClick={handleExport} disabled={busy}><Download className="mr-2 h-4 w-4" />Download backup</Button></CardContent>
         </Card>
@@ -120,7 +146,7 @@ const LocalData = () => {
         <Card>
           <CardHeader>
             <CardTitle>Restore</CardTitle>
-            <CardDescription>Load a HabitFlow backup file (up to 10 MB). You will be asked to confirm before anything is replaced.</CardDescription>
+            <CardDescription>Restore a passphrase-encrypted HabitFlow backup (up to 10 MB). Nothing changes until you confirm.</CardDescription>
           </CardHeader>
           <CardContent>
             <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
@@ -129,18 +155,28 @@ const LocalData = () => {
         </Card>
       </main>
 
-      <AlertDialog open={!!pending} onOpenChange={(o) => !o && setPending(null)}>
+      <AlertDialog open={!!pendingText} onOpenChange={(o) => { if (!o) { setPending(null); setPendingText(null); setRestorePassphrase(""); setRestoreError(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Replace your data on this device?</AlertDialogTitle>
+            <AlertDialogTitle>{pending ? "Replace your data on this device?" : "Unlock this backup"}</AlertDialogTitle>
             <AlertDialogDescription>
-              The backup contains {counts?.habits} habits, {counts?.records} check-ins and {counts?.journal} journal entries.
-              Your current habits, check-ins and journal on this device will be replaced. Consider downloading a backup first.
+              {pending
+                ? `The backup contains ${counts?.habits} habits, ${counts?.records} check-ins, ${counts?.journal} journal entries, ${counts?.tasks} tasks and ${counts?.projects} projects. Your current data will be replaced. Download a backup first if you need one.`
+                : "Enter the passphrase used when this backup was created."}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {!pending && (
+            <div className="space-y-2">
+              <Label htmlFor="restore-passphrase">Backup passphrase</Label>
+              <Input id="restore-passphrase" type="password" autoComplete="current-password" value={restorePassphrase} onChange={(event) => setRestorePassphrase(event.target.value)} />
+              {restoreError && <p role="alert" className="text-sm text-destructive">{restoreError}</p>}
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmImport} disabled={busy}>Replace data</AlertDialogAction>
+            {pending
+              ? <AlertDialogAction onClick={confirmImport} disabled={busy}>Replace data</AlertDialogAction>
+              : <Button onClick={previewBackup} disabled={busy || restorePassphrase.length < 12}><LockKeyhole className="mr-2 h-4 w-4" />Unlock backup</Button>}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
