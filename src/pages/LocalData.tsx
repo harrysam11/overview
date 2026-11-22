@@ -24,6 +24,7 @@ const LocalData = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<LocalBackup | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
+  const [pendingIsPlaintext, setPendingIsPlaintext] = useState(false);
   const [restorePassphrase, setRestorePassphrase] = useState("");
   const [restoreError, setRestoreError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -63,8 +64,11 @@ const LocalData = () => {
       return;
     }
     try {
-      setPendingText(await file.text());
-      setPending(null);
+      const text = await file.text();
+      const plaintext = (await import("@/lib/local/backup")).parseBackup(text);
+      setPendingText(text);
+      setPending(plaintext.ok ? plaintext.backup : null);
+      setPendingIsPlaintext(plaintext.ok);
       setRestoreError("");
     } catch {
       toast({ title: "Backup not imported", description: "Could not read the selected file.", variant: "destructive" });
@@ -94,6 +98,7 @@ const LocalData = () => {
       toast({ title: "Backup restored" });
       setPending(null);
       setPendingText(null);
+      setPendingIsPlaintext(false);
     } catch (e) {
       console.error(e);
       toast({ description: "Import failed. Your existing data was not changed.", variant: "destructive" });
@@ -155,13 +160,13 @@ const LocalData = () => {
         </Card>
       </main>
 
-      <AlertDialog open={!!pendingText} onOpenChange={(o) => { if (!o) { setPending(null); setPendingText(null); setRestorePassphrase(""); setRestoreError(""); } }}>
+      <AlertDialog open={!!pendingText} onOpenChange={(o) => { if (!o) { setPending(null); setPendingText(null); setPendingIsPlaintext(false); setRestorePassphrase(""); setRestoreError(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{pending ? "Replace your data on this device?" : "Unlock this backup"}</AlertDialogTitle>
             <AlertDialogDescription>
               {pending
-                ? `The backup contains ${counts?.habits} habits, ${counts?.records} check-ins, ${counts?.journal} journal entries, ${counts?.tasks} tasks and ${counts?.projects} projects. Your current data will be replaced. Download a backup first if you need one.`
+                ? `The backup contains ${counts?.habits} habits, ${counts?.records} check-ins, ${counts?.journal} journal entries, ${counts?.tasks} tasks and ${counts?.projects} projects. Your current data will be replaced. ${pendingIsPlaintext ? "This older backup is readable JSON; its validated data will be encrypted when imported." : "Download a backup first if you need one."}`
                 : "Enter the passphrase used when this backup was created."}
             </AlertDialogDescription>
           </AlertDialogHeader>

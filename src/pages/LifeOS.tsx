@@ -36,10 +36,27 @@ import { isLocalMode } from "@/lib/appMode";
 import { LocalModeBadge } from "@/components/LocalModeBadge";
 import { useToast } from "@/hooks/use-toast";
 import { LocalVaultError, newId } from "@/lib/local/localDb";
+import { localProjectSchema, localTaskSchema } from "@/lib/local/schema";
 import { readVaultData, updateVaultData, validateLifeOsEntry } from "@/lib/local/vault";
 
 type LocalTask = { id: string; title: string; done: boolean };
 type LocalProject = { id: string; title: string; area: string };
+const TASKS_KEY = "habitflow-lifeos-tasks";
+const PROJECTS_KEY = "habitflow-lifeos-projects";
+
+const readCloudModeList = <T,>(key: string, schema: typeof localTaskSchema | typeof localProjectSchema): T[] => {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.flatMap((item) => {
+      const valid = schema.safeParse(item);
+      return valid.success ? [valid.data as T] : [];
+    });
+  } catch {
+    return [];
+  }
+};
 
 const areas = [
   { id: "tasks", label: "Tasks", icon: ListTodo, description: "Keep today moving" },
@@ -62,6 +79,11 @@ const LifeOS = () => {
   const [focusRunning, setFocusRunning] = useState(false);
 
   useEffect(() => {
+    if (!isLocalMode) {
+      setTasks(readCloudModeList<LocalTask>(TASKS_KEY, localTaskSchema));
+      setProjects(readCloudModeList<LocalProject>(PROJECTS_KEY, localProjectSchema));
+      return;
+    }
     let mounted = true;
     readVaultData()
       .then((data) => {
@@ -94,8 +116,14 @@ const LifeOS = () => {
     if (!title) return;
     try {
       const task = validateLifeOsEntry({ id: newId(), title, done: false }, "task");
-      const updated = await updateVaultData((data) => ({ ...data, tasks: [...data.tasks, task] }));
-      setTasks(updated.tasks);
+      if (isLocalMode) {
+        const updated = await updateVaultData((data) => ({ ...data, tasks: [...data.tasks, task] }));
+        setTasks(updated.tasks);
+      } else {
+        const updated = [...tasks, task];
+        window.localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+        setTasks(updated);
+      }
       setNewTask("");
     } catch (error) {
       toast({ description: error instanceof Error ? error.message : "Could not add task.", variant: "destructive" });
@@ -107,8 +135,14 @@ const LifeOS = () => {
     if (!title) return;
     try {
       const project = validateLifeOsEntry({ id: newId(), title, area: "Personal" }, "project");
-      const updated = await updateVaultData((data) => ({ ...data, projects: [...data.projects, project] }));
-      setProjects(updated.projects);
+      if (isLocalMode) {
+        const updated = await updateVaultData((data) => ({ ...data, projects: [...data.projects, project] }));
+        setProjects(updated.projects);
+      } else {
+        const updated = [...projects, project];
+        window.localStorage.setItem(PROJECTS_KEY, JSON.stringify(updated));
+        setProjects(updated);
+      }
       setNewProject("");
     } catch (error) {
       toast({ description: error instanceof Error ? error.message : "Could not add project.", variant: "destructive" });
@@ -117,8 +151,14 @@ const LifeOS = () => {
 
   const toggleTask = async (id: string) => {
     try {
-      const updated = await updateVaultData((data) => ({ ...data, tasks: data.tasks.map((task) => task.id === id ? { ...task, done: !task.done } : task) }));
-      setTasks(updated.tasks);
+      if (isLocalMode) {
+        const updated = await updateVaultData((data) => ({ ...data, tasks: data.tasks.map((task) => task.id === id ? { ...task, done: !task.done } : task) }));
+        setTasks(updated.tasks);
+      } else {
+        const updated = tasks.map((task) => task.id === id ? { ...task, done: !task.done } : task);
+        window.localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+        setTasks(updated);
+      }
     } catch (error) {
       toast({ description: error instanceof Error ? error.message : "Could not update task.", variant: "destructive" });
     }

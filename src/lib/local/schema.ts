@@ -3,6 +3,7 @@ import { z } from "zod";
 /** Bump when the local IndexedDB layout or backup format changes; add an upgrade step in localDb.ts. */
 export const LOCAL_SCHEMA_VERSION = 2;
 export const BACKUP_SCHEMA_VERSION = 2;
+export const LEGACY_BACKUP_SCHEMA_VERSION = 1;
 export const BACKUP_APP_ID = "habitflow-lifeos";
 
 export const LIMITS = {
@@ -97,6 +98,19 @@ export const backupSchema = z.object({
     journal_entries: z.array(localJournalEntrySchema).max(LIMITS.maxJournalEntries),
     tasks: z.array(localTaskSchema).max(LIMITS.maxTasks),
     projects: z.array(localProjectSchema).max(LIMITS.maxProjects),
+  }),
+});
+
+export const legacyBackupSchema = z.object({
+  app: z.literal(BACKUP_APP_ID),
+  schema_version: z.literal(LEGACY_BACKUP_SCHEMA_VERSION),
+  exported_at: z.string(),
+  data: z.object({
+    habits: z.array(localHabitSchema).max(LIMITS.maxHabits),
+    daily_records: z.array(localDailyRecordSchema).max(LIMITS.maxRecords),
+    journal_entries: z.array(localJournalEntrySchema).max(LIMITS.maxJournalEntries),
+    tasks: z.array(localTaskSchema).max(LIMITS.maxTasks).default([]),
+    projects: z.array(localProjectSchema).max(LIMITS.maxProjects).default([]),
   }),
 });
 

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { HardDrive } from "lucide-react";
+import { HardDrive, LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -8,7 +8,7 @@ export const LocalModeBadge = () => (
     <PopoverTrigger asChild>
       <button aria-label="About local mode">
         <Badge variant="outline" className="gap-1.5 cursor-pointer">
-          <HardDrive className="h-3 w-3" /> Local mode
+          <HardDrive className="h-3 w-3" /> <LockKeyhole className="h-3 w-3" /> Local mode
         </Badge>
       </button>
     </PopoverTrigger>

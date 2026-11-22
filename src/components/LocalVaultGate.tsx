@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { hasEncryptedVault, lockLocalVault, unlockLocalVault } from "@/lib/local/vault";
 
 export const LOCAL_VAULT_LOCK_EVENT = "habitflow:lock-local-vault";
+const LOCK_SIGNAL_KEY = "habitflow-local-vault-lock-signal";
 
 const IDLE_LOCK_MS = 10 * 60 * 1000;
 
@@ -28,7 +29,7 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
     return () => { mounted = false; };
   }, []);
 
-  const lock = useCallback(() => {
+  const clearUnlockedState = useCallback(() => {
     lockLocalVault();
     setUnlocked(false);
     setHasVault(true);
@@ -36,6 +37,23 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
     setConfirmation("");
     setError("");
   }, []);
+
+  const lock = useCallback(() => {
+    try {
+      window.localStorage.setItem(LOCK_SIGNAL_KEY, String(Date.now()));
+    } catch {
+      // Locking the current tab must still work when localStorage is unavailable.
+    }
+    clearUnlockedState();
+  }, [clearUnlockedState]);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === LOCK_SIGNAL_KEY) clearUnlockedState();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [clearUnlockedState]);
 
   useEffect(() => {
     if (!unlocked) return;

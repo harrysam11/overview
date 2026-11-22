@@ -3,6 +3,7 @@ import {
   BACKUP_APP_ID,
   BACKUP_SCHEMA_VERSION,
   backupSchema,
+  legacyBackupSchema,
   LIMITS,
   type LocalBackup,
 } from "./schema";
@@ -28,11 +29,19 @@ export const parseBackup = (text: string): ParseResult => {
     return { ok: false, error: "File is not valid JSON." };
   }
   const parsed = backupSchema.safeParse(json);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    return { ok: false, error: `Backup is invalid at ${issue.path.join(".") || "root"}: ${issue.message}` };
+  if (parsed.success) return validateBackup(parsed.data);
+
+  const legacy = legacyBackupSchema.safeParse(json);
+  if (legacy.success) {
+    return validateBackup({
+      ...legacy.data,
+      schema_version: BACKUP_SCHEMA_VERSION,
+      data: { ...legacy.data.data, tasks: legacy.data.data.tasks, projects: legacy.data.data.projects },
+    });
   }
-  return validateBackup(parsed.data);
+
+  const issue = legacy.error.issues[0] ?? parsed.error.issues[0];
+  return { ok: false, error: `Backup is invalid at ${issue.path.join(".") || "root"}: ${issue.message}` };
 };
 
 export const validateBackup = (backup: LocalBackup): ParseResult => {

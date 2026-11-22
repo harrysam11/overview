@@ -65,7 +65,7 @@ export const HabitList = ({
       if (!validation.success) {
         toast({
           title: "Invalid notes",
-          description: validation.error.errors[0].message,
+          description: validation.error.issues[0].message,
           variant: "destructive",
         });
         return;
@@ -89,7 +89,7 @@ export const HabitList = ({
     if (!validation.success) {
       toast({
         title: "Invalid habit name",
-        description: validation.error.errors[0].message,
+        description: validation.error.issues[0].message,
         variant: "destructive",
       });
       return;
@@ -110,7 +110,7 @@ export const HabitList = ({
     if (!validation.success) {
       toast({
         title: "Invalid habit name",
-        description: validation.error.errors[0].message,
+        description: validation.error.issues[0].message,
         variant: "destructive",
       });
       return;

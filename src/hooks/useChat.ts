@@ -156,7 +156,7 @@ export const useChat = () => {
       const result = messageContentSchema.safeParse(content);
       if (!result.success) {
         toast({
-          description: result.error.errors[0]?.message || "Invalid message",
+          description: result.error.issues[0]?.message || "Invalid message",
           variant: "destructive",
         });
         return;

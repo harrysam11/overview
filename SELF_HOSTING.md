@@ -1,6 +1,6 @@
 # Self-hosting HabitFlow LifeOS (local mode)
 
-Local mode is the default. Supported data stays in your browser (IndexedDB) on your machine; no account, no cloud requests.
+Local mode is the default. Habits, check-ins, journal, tasks and projects stay on this computer in an encrypted browser vault; no account or cloud requests are needed.
 
 ## Run on Zorin OS / Ubuntu (verified commands)
 
@@ -14,8 +14,8 @@ npm run build     # outputs dist/
 npx vite preview --host 127.0.0.1 --port 4173
 ```
 
-Open http://127.0.0.1:4173. Bind to 127.0.0.1 only so the app is not reachable from your network.
-Data is tied to that exact address and browser profile: always use the same URL and browser.
+Open http://127.0.0.1:4173. Keep the app bound to 127.0.0.1 so it is not reachable from your network.
+Data is tied to that exact address and browser profile: always use the same URL and browser. Secure browser encryption requires localhost or HTTPS.
 
 For development: `npm run dev` (port 8080).
 
@@ -26,27 +26,29 @@ For development: `npm run dev` (port 8080).
 | Habits (do/don't), daily check-ins, edit name/notes | Yes (IndexedDB) |
 | Daily journal, calendar, points, streaks | Yes |
 | Analytics charts, habit-wise analysis | Yes |
-| LifeOS home: tasks, projects, focus | Yes (browser localStorage) |
-| Backup/restore (habits, check-ins, journal) | Yes, `/data` page, JSON, max 10 MB |
+| LifeOS home: tasks, projects | Yes (encrypted browser vault) |
+| Backup/restore (habits, check-ins, journal, tasks, projects) | Yes, `/data` page, passphrase-encrypted JSON, max 10 MB |
 | Planner, goals roadmap, universal diary, ideas | Not yet (shows a notice) |
 | Badges, levels, scratch pad, app shortcuts, settings | Not yet (cloud tracker only) |
 | Friends, chat, groups, challenges, leaderboards | Off by design (need other users) |
 | Habit workspace files | Off (needs cloud file storage) |
 | Accounts / sign in | Not used locally |
 
-Note: LifeOS tasks/projects are not included in the JSON backup yet.
-
 ## Known limitations
 
 - Clearing site data for the app's address deletes local data. The app asks the browser to keep data (`navigator.storage.persist()`), but the browser may decline. Export backups regularly.
-- Data is not encrypted by the app. Use full-disk encryption on your computer.
+- A passphrase is required to create and unlock the encrypted vault; it is never saved. The app locks after ten minutes idle, when the tab is hidden, or when you press Lock.
+- Forgotten passphrases cannot be recovered. The app cannot recover encrypted data without the correct passphrase. Keep the passphrase safe and test a backup.
+- New backups are encrypted and include tasks/projects. Older plaintext backups can be imported after a clear warning; they are validated and stored in the encrypted vault.
+- Encryption protects stored data at rest; it does not protect a computer with malware, an already-unlocked browser, weak passphrases, or unencrypted system swap/hibernation. Use full-disk encryption and a strong unique passphrase.
 - No sync between devices.
 - Existing cloud data is not migrated (decision deferred).
-- The offline app-install (PWA) caches the app; after upgrades, reload twice if the old version shows.
+- The offline app-install (PWA) caches app files only; private cloud API responses are never placed in its cache. Local serving adds a restrictive content policy and binds only to loopback.
+- Only habits, check-ins, journal entries, tasks and projects are available locally and encrypted. Planner, goal roadmap, ideas, social features, badges/levels, scratch pad and cloud accounts remain unavailable in local mode until migrated.
 
 ## Cloud mode (opt-in, legacy)
 
-Set `VITE_DATA_MODE=cloud` plus the backend values from `.env.example` in `.env.local`, then rebuild. All original features return. Local mode never loads this code.
+The legacy online mode is not part of the self-hosting setup. Do not add cloud credentials to a local installation. Local mode never loads cloud-only code.
 
 ## Remaining cloud dependencies in the codebase (only used in cloud mode)
 
