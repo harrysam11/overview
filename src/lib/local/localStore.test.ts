@@ -7,7 +7,7 @@ import { resolveAppMode } from "@/lib/appMode";
 import { exportLocalData, parseBackup, replaceLocalData } from "./backup";
 import { closeLocalDb, getLocalDb, newId, nowIso } from "./localDb";
 import { BACKUP_SCHEMA_VERSION, LIMITS } from "./schema";
-import { decryptBackupWithPassphrase, exportEncryptedBackup, lockLocalVault, readVaultData, unlockLocalVault, updateVaultData } from "./vault";
+import { decryptBackupWithPassphrase, exportEncryptedBackup, hasEncryptedVault, lockLocalVault, readVaultData, unlockLocalVault, updateVaultData } from "./vault";
 
 const PASSPHRASE = "HabitFlow local test passphrase";
 
@@ -117,6 +117,14 @@ describe("passphrase vault", () => {
     expect((await readVaultData()).habits[0]?.name).toBe("Private habit");
   });
 
+  it("preserves plaintext records if legacy data fails validation", async () => {
+    const db = await getLocalDb();
+    await db.add("habits", { id: "bad-habit", name: "", type: "do", is_active: true, notes: null, created_at: nowIso(), updated_at: nowIso() });
+    await expect(unlock()).rejects.toThrow("needs repair");
+    expect(await db.count("habits")).toBe(1);
+    expect(await hasEncryptedVault()).toBe(false);
+  });
+
   it("uses encrypted backups for habits, journal, tasks and projects", async () => {
     await unlock();
     const habit = await store.addHabit("Private habit", "do");
@@ -175,5 +183,21 @@ describe("backup validation", () => {
     const backup = base();
     backup.data.daily_records.push({ id: "record", habit_id: "ghost", record_date: "2026-01-01", completed: true, created_at: "t", updated_at: "t" });
     expect(parseBackup(JSON.stringify(backup)).ok).toBe(false);
+  });
+
+  it("validates and upgrades older plaintext backups for encrypted import", () => {
+    const legacy = {
+      app: "habitflow-lifeos",
+      schema_version: 1,
+      exported_at: "2026-01-01T00:00:00.000Z",
+      data: { habits: [], daily_records: [], journal_entries: [] },
+    };
+    const result = parseBackup(JSON.stringify(legacy));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.backup.schema_version).toBe(BACKUP_SCHEMA_VERSION);
+      expect(result.backup.data.tasks).toEqual([]);
+      expect(result.backup.data.projects).toEqual([]);
+    }
   });
 });

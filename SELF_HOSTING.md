@@ -39,7 +39,7 @@ For development: `npm run dev` (port 8080).
 - Clearing site data for the app's address deletes local data. The app asks the browser to keep data (`navigator.storage.persist()`), but the browser may decline. Export backups regularly.
 - A passphrase is required to create and unlock the encrypted vault; it is never saved. The app locks after ten minutes idle, when the tab is hidden, or when you press Lock.
 - Forgotten passphrases cannot be recovered. The app cannot recover encrypted data without the correct passphrase. Keep the passphrase safe and test a backup.
-- New backups are encrypted and include tasks/projects. Older plaintext backups can be imported after a clear warning; they are validated and stored in the encrypted vault.
+- New backups are encrypted and include tasks/projects. Older plaintext backups can be imported after a clear warning; they are validated and stored in the encrypted vault. Files above 10 MB are rejected.
 - Encryption protects stored data at rest; it does not protect a computer with malware, an already-unlocked browser, weak passphrases, or unencrypted system swap/hibernation. Use full-disk encryption and a strong unique passphrase.
 - No sync between devices.
 - Existing cloud data is not migrated (decision deferred).

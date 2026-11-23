@@ -7,6 +7,7 @@ import {
   localProjectSchema,
   localTaskSchema,
   localVaultDataSchema,
+  LIMITS,
   type LocalBackup,
   type LocalVaultData,
 } from "./schema";
@@ -266,10 +267,17 @@ export const updateVaultData = async (update: (data: LocalVaultData) => LocalVau
 export const exportEncryptedBackup = async (backup: LocalBackup): Promise<string> => {
   const { key, salt } = requireUnlocked();
   const payload = await encryptJson(backup, key, salt);
-  return JSON.stringify({ app: BACKUP_APP_ID, kind: BACKUP_KIND, ...payload });
+  const encrypted = JSON.stringify({ app: BACKUP_APP_ID, kind: BACKUP_KIND, ...payload });
+  if (new TextEncoder().encode(encrypted).byteLength > LIMITS.maxImportBytes) {
+    throw new LocalVaultError("Backup is larger than 10 MB and cannot be exported.");
+  }
+  return encrypted;
 };
 
 export const decryptBackupWithPassphrase = async (text: string, passphrase: string): Promise<LocalBackup> => {
+  if (new TextEncoder().encode(text).byteLength > LIMITS.maxImportBytes) {
+    throw new LocalVaultError("Backup is larger than 10 MB.");
+  }
   if (passphrase.length < 12 || passphrase.length > 1024) throw new LocalVaultError("Use a passphrase between 12 and 1,024 characters.");
   let unknownJson: unknown;
   try {

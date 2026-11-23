@@ -13,7 +13,7 @@ import { LocalModeBadge } from "@/components/LocalModeBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
 import { requestPersistentStorage } from "@/lib/appMode";
-import { backupCounts, exportLocalData, replaceLocalData } from "@/lib/local/backup";
+import { backupCounts, exportLocalData, parseBackup, replaceLocalData } from "@/lib/local/backup";
 import { LIMITS, type LocalBackup } from "@/lib/local/schema";
 import { decryptBackupWithPassphrase, exportEncryptedBackup } from "@/lib/local/vault";
 import { LocalVaultLockButton } from "@/components/LocalVaultLockButton";
@@ -65,7 +65,7 @@ const LocalData = () => {
     }
     try {
       const text = await file.text();
-      const plaintext = (await import("@/lib/local/backup")).parseBackup(text);
+      const plaintext = parseBackup(text);
       setPendingText(text);
       setPending(plaintext.ok ? plaintext.backup : null);
       setPendingIsPlaintext(plaintext.ok);
