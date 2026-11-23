@@ -82,7 +82,7 @@ export const validateBackup = (backup: LocalBackup): ParseResult => {
 
 export const replaceLocalData = async (backup: LocalBackup): Promise<void> => {
   const validated = validateBackup(backup);
-  if (!validated.ok) throw new LocalStoreError(validated.error);
+  if (validated.ok === false) throw new LocalStoreError(validated.error);
   await updateVaultData(() => backup.data);
 };
 

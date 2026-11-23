@@ -9,6 +9,8 @@ import {
   localVaultDataSchema,
   LIMITS,
   type LocalBackup,
+  type LocalProject,
+  type LocalTask,
   type LocalVaultData,
 } from "./schema";
 
@@ -31,7 +33,7 @@ const backupEnvelopeSchema = encryptedPayloadSchema.extend({
 });
 
 let activeKey: CryptoKey | null = null;
-let activeSalt: Uint8Array | null = null;
+let activeSalt: Uint8Array<ArrayBuffer> | null = null;
 let mutationQueue: Promise<void> = Promise.resolve();
 
 const toBase64 = (bytes: Uint8Array) => {
@@ -42,18 +44,18 @@ const toBase64 = (bytes: Uint8Array) => {
   return btoa(binary);
 };
 
-const fromBase64 = (value: string): Uint8Array => {
+const fromBase64 = (value: string): Uint8Array<ArrayBuffer> => {
   const binary = atob(value);
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 };
 
-const randomBytes = (length: number) => {
+const randomBytes = (length: number): Uint8Array<ArrayBuffer> => {
   const value = new Uint8Array(length);
   crypto.getRandomValues(value);
   return value;
 };
 
-const deriveKey = async (passphrase: string, salt: Uint8Array, iterations = PBKDF2_ITERATIONS): Promise<CryptoKey> => {
+const deriveKey = async (passphrase: string, salt: Uint8Array<ArrayBuffer>, iterations = PBKDF2_ITERATIONS): Promise<CryptoKey> => {
   if (!globalThis.crypto?.subtle) {
     throw new LocalVaultError("Secure encryption is unavailable. Open HabitFlow on localhost or a secure local connection.");
   }
@@ -293,8 +295,10 @@ export const decryptBackupWithPassphrase = async (text: string, passphrase: stri
   return parsed.data;
 };
 
-export const validateLifeOsEntry = (value: unknown, kind: "task" | "project") => {
+export function validateLifeOsEntry(value: unknown, kind: "task"): LocalTask;
+export function validateLifeOsEntry(value: unknown, kind: "project"): LocalProject;
+export function validateLifeOsEntry(value: unknown, kind: "task" | "project"): LocalTask | LocalProject {
   const result = kind === "task" ? localTaskSchema.safeParse(value) : localProjectSchema.safeParse(value);
   if (!result.success) throw new LocalStoreError(`Invalid ${kind} data.`);
   return result.data;
-};
+}

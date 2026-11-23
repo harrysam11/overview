@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 import {
   ArrowRight,
   BarChart3,
@@ -35,23 +36,23 @@ import { getHabitStore } from "@/lib/data/habitStore";
 import { isLocalMode } from "@/lib/appMode";
 import { LocalModeBadge } from "@/components/LocalModeBadge";
 import { useToast } from "@/hooks/use-toast";
-import { LocalVaultError, newId } from "@/lib/local/localDb";
+import { newId } from "@/lib/local/localDb";
 import { localProjectSchema, localTaskSchema } from "@/lib/local/schema";
-import { readVaultData, updateVaultData, validateLifeOsEntry } from "@/lib/local/vault";
+import { LocalVaultError, readVaultData, updateVaultData, validateLifeOsEntry } from "@/lib/local/vault";
 
 type LocalTask = { id: string; title: string; done: boolean };
 type LocalProject = { id: string; title: string; area: string };
 const TASKS_KEY = "habitflow-lifeos-tasks";
 const PROJECTS_KEY = "habitflow-lifeos-projects";
 
-const readCloudModeList = <T,>(key: string, schema: typeof localTaskSchema | typeof localProjectSchema): T[] => {
+const readCloudModeList = <T,>(key: string, schema: z.ZodType<T>): T[] => {
   try {
     const raw = window.localStorage.getItem(key);
     const parsed: unknown = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     return parsed.flatMap((item) => {
       const valid = schema.safeParse(item);
-      return valid.success ? [valid.data as T] : [];
+      return valid.success ? [valid.data] : [];
     });
   } catch {
     return [];
