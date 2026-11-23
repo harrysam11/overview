@@ -3,23 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ArrowLeft, Plus, Trash2, BookOpen, Loader2, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { RichEditor } from "@/components/editor/RichEditor";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isLocalMode } from "@/lib/appMode";
+import { getDiaryStore, type DiaryEntry } from "@/lib/data/diaryStore";
+import { getHabitStore, type Habit } from "@/lib/data/habitStore";
 import { cn } from "@/lib/utils";
-
-interface Habit { id: string; name: string; type: "do" | "dont"; }
-interface DiaryEntry {
-  id: string;
-  entry_date: string;
-  title: string | null;
-  content: any;
-  updated_at: string;
-}
 
 const Diary = () => {
   const navigate = useNavigate();
@@ -32,35 +25,48 @@ const Diary = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate("/auth"); return; }
-      await loadAll();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
-    const [h, e, t] = await Promise.all([
-      supabase.from("habits").select("id,name,type").eq("is_active", true).order("created_at"),
-      supabase.from("diary_entries").select("*").order("entry_date", { ascending: false }).order("updated_at", { ascending: false }),
-      supabase.from("diary_entry_habits").select("diary_entry_id,habit_id"),
-    ]);
-    if (h.data) setHabits(h.data as Habit[]);
-    if (e.data) {
-      setEntries(e.data as DiaryEntry[]);
-      if (e.data.length && !selectedId) setSelectedId(e.data[0].id);
+    try {
+      const [diaryStore, habitStore] = await Promise.all([getDiaryStore(), getHabitStore()]);
+      const [h, e, t] = await Promise.all([
+        habitStore.listActiveHabits(),
+        diaryStore.listEntries(),
+        diaryStore.listTags(),
+      ]);
+      setHabits(h);
+      setEntries(e);
+      if (e.length && !selectedId) setSelectedId(e[0].id);
+
+      const tmap = new Map<string, Set<string>>();
+      t.forEach((r) => {
+        if (!tmap.has(r.diary_entry_id)) tmap.set(r.diary_entry_id, new Set());
+        tmap.get(r.diary_entry_id)!.add(r.habit_id);
+      });
+      setTags(tmap);
+    } catch (error) {
+      console.error(error);
+      toast({ description: "Failed to load diary entries.", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    const tmap = new Map<string, Set<string>>();
-    (t.data || []).forEach((r: any) => {
-      if (!tmap.has(r.diary_entry_id)) tmap.set(r.diary_entry_id, new Set());
-      tmap.get(r.diary_entry_id)!.add(r.habit_id);
-    });
-    setTags(tmap);
-    setLoading(false);
-  };
+  }, [selectedId, toast]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!isLocalMode) {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user && mounted) {
+          navigate("/auth");
+          return;
+        }
+      }
+      if (mounted) await loadAll();
+    })();
+    return () => { mounted = false; };
+  }, [loadAll, navigate]);
 
   const selected = entries.find((e) => e.id === selectedId) || null;
   const visibleEntries = filterHabit
@@ -68,59 +74,67 @@ const Diary = () => {
     : entries;
 
   const createEntry = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const today = format(new Date(), "yyyy-MM-dd");
-    const { data, error } = await supabase
-      .from("diary_entries")
-      .insert({ user_id: user.id, entry_date: today, title: "Untitled", content: {} })
-      .select()
-      .single();
-    if (error) { console.error(error); toast({ title: "Failed", description: "Could not create entry. Please try again.", variant: "destructive" }); return; }
-    setEntries([data as DiaryEntry, ...entries]);
-    setSelectedId(data!.id);
+    try {
+      const store = await getDiaryStore();
+      const today = format(new Date(), "yyyy-MM-dd");
+      const data = await store.createEntry(today, "Untitled", {});
+      setEntries([data, ...entries]);
+      setSelectedId(data.id);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed", description: "Could not create entry. Please try again.", variant: "destructive" });
+    }
   };
 
   const deleteEntry = async (id: string) => {
-    const { error } = await supabase.from("diary_entries").delete().eq("id", id);
-    if (error) { toast({ title: "Delete failed", variant: "destructive" }); return; }
-    const remaining = entries.filter((e) => e.id !== id);
-    setEntries(remaining);
-    if (selectedId === id) setSelectedId(remaining[0]?.id || null);
+    try {
+      const store = await getDiaryStore();
+      await store.deleteEntry(id);
+      const remaining = entries.filter((e) => e.id !== id);
+      setEntries(remaining);
+      if (selectedId === id) setSelectedId(remaining[0]?.id || null);
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
   };
 
   const updateEntry = useCallback(async (patch: Partial<DiaryEntry>) => {
     if (!selected) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("diary_entries")
-      .update(patch)
-      .eq("id", selected.id);
-    if (error) { console.error(error); toast({ title: "Save failed", description: "Could not save entry. Please try again.", variant: "destructive" }); }
-    else setEntries((prev) => prev.map((e) => (e.id === selected.id ? { ...e, ...patch } : e)));
-    setSaving(false);
+    try {
+      const store = await getDiaryStore();
+      await store.updateEntry(selected.id, patch);
+      setEntries((prev) => prev.map((e) => (e.id === selected.id ? { ...e, ...patch } : e)));
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Save failed", description: "Could not save entry. Please try again.", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   }, [selected, toast]);
 
   const toggleTag = async (habitId: string) => {
     if (!selected) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const current = tags.get(selected.id) || new Set();
-    const next = new Map(tags);
-    if (current.has(habitId)) {
-      await supabase.from("diary_entry_habits").delete()
-        .eq("diary_entry_id", selected.id).eq("habit_id", habitId);
-      const ns = new Set(current); ns.delete(habitId);
-      next.set(selected.id, ns);
-    } else {
-      const { error } = await supabase.from("diary_entry_habits").insert({
-        diary_entry_id: selected.id, habit_id: habitId, user_id: user.id,
-      });
-      if (error) { console.error(error); toast({ title: "Failed", description: "Could not tag habit. Please try again.", variant: "destructive" }); return; }
-      const ns = new Set(current); ns.add(habitId);
-      next.set(selected.id, ns);
+    try {
+      const store = await getDiaryStore();
+      await store.toggleTag(selected.id, habitId);
+
+      const current = tags.get(selected.id) || new Set();
+      const next = new Map(tags);
+      if (current.has(habitId)) {
+        const ns = new Set(current);
+        ns.delete(habitId);
+        next.set(selected.id, ns);
+      } else {
+        const ns = new Set(current);
+        ns.add(habitId);
+        next.set(selected.id, ns);
+      }
+      setTags(next);
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Failed", description: "Could not tag habit. Please try again.", variant: "destructive" });
     }
-    setTags(next);
   };
 
   // debounced auto-save for editor content
@@ -135,8 +149,7 @@ const Diary = () => {
       updateEntry({ content: selected.content });
     }, 800);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected?.content]);
+  }, [selected?.content, updateEntry]);
 
   return (
     <div className="min-h-screen bg-background">

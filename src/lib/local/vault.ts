@@ -3,6 +3,10 @@ import { getLocalDb, LocalStoreError, type EncryptedVaultRecord } from "./localD
 import {
   BACKUP_APP_ID,
   backupSchema,
+  backupSchemaV2,
+  backupSchemaV3,
+  backupSchemaV4,
+  legacyBackupSchema,
   encryptedPayloadSchema,
   localProjectSchema,
   localTaskSchema,
@@ -179,7 +183,45 @@ const removeLegacyTaskKeys = () => {
   }
 };
 
-export const unlockLocalVault = async (passphrase: string): Promise<void> => {
+export const getPassphraseHint = async (): Promise<string | null> => {
+  try {
+    const db = await getLocalDb();
+    const hint = await db.get("meta", "passphrase_hint");
+    return typeof hint === "string" ? hint : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setPassphraseHint = async (hint: string | null): Promise<void> => {
+  const db = await getLocalDb();
+  if (hint && hint.trim()) {
+    await db.put("meta", hint.trim(), "passphrase_hint");
+  } else {
+    await db.delete("meta", "passphrase_hint");
+  }
+};
+
+export const getLastBackupTime = async (): Promise<string | null> => {
+  try {
+    const db = await getLocalDb();
+    const time = await db.get("meta", "last_backup_at");
+    return typeof time === "string" ? time : null;
+  } catch {
+    return null;
+  }
+};
+
+export const recordBackupTime = async (): Promise<void> => {
+  try {
+    const db = await getLocalDb();
+    await db.put("meta", new Date().toISOString(), "last_backup_at");
+  } catch {
+    // non-fatal
+  }
+};
+
+export const unlockLocalVault = async (passphrase: string, hint?: string | null): Promise<void> => {
   if (passphrase.length < 12 || passphrase.length > 1024) {
     throw new LocalVaultError("Use a passphrase between 12 and 1,024 characters.");
   }
@@ -204,9 +246,46 @@ export const unlockLocalVault = async (passphrase: string): Promise<void> => {
     const existing = await db.get("vault", VAULT_ID);
     if (existing) throw new LocalVaultError("Another tab initialized the secure vault. Reload and unlock it.");
     await migrateLegacyDataAtomically(legacyData, key, salt);
+    if (hint && hint.trim()) {
+      await db.put("meta", hint.trim(), "passphrase_hint");
+    }
   });
   activeKey = key;
   activeSalt = salt;
+};
+
+export const changePassphrase = async (newPassphrase: string, newHint?: string | null): Promise<void> => {
+  if (newPassphrase.length < 12 || newPassphrase.length > 1024) {
+    throw new LocalVaultError("Use a passphrase between 12 and 1,024 characters.");
+  }
+  const { key } = requireUnlocked();
+  const db = await getLocalDb();
+  const currentRecord = await db.get("vault", VAULT_ID);
+  if (!currentRecord) throw new LocalVaultError("Encrypted local data could not be found.");
+  const currentData = await decryptVaultRecord(currentRecord, key);
+
+  const newSalt = randomBytes(16);
+  const newKey = await deriveKey(newPassphrase, newSalt);
+  const payload = await encryptJson(currentData, newKey, newSalt);
+
+  await withMutationLock(async () => {
+    const tx = db.transaction(["vault", "meta"], "readwrite");
+    const vaultStore = tx.objectStore("vault");
+    const metaStore = tx.objectStore("meta");
+    const latest = await vaultStore.get(VAULT_ID);
+    await vaultStore.put({ id: VAULT_ID, ...payload, revision: (latest?.revision ?? 0) + 1 });
+    if (newHint !== undefined) {
+      if (newHint && newHint.trim()) {
+        await metaStore.put(newHint.trim(), "passphrase_hint");
+      } else {
+        await metaStore.delete("passphrase_hint");
+      }
+    }
+    await tx.done;
+  });
+
+  activeKey = newKey;
+  activeSalt = newSalt;
 };
 
 export const lockLocalVault = () => {
@@ -273,6 +352,7 @@ export const exportEncryptedBackup = async (backup: LocalBackup): Promise<string
   if (new TextEncoder().encode(encrypted).byteLength > LIMITS.maxImportBytes) {
     throw new LocalVaultError("Backup is larger than 10 MB and cannot be exported.");
   }
+  recordBackupTime().catch(() => {});
   return encrypted;
 };
 
@@ -290,9 +370,41 @@ export const decryptBackupWithPassphrase = async (text: string, passphrase: stri
   const envelope = backupEnvelopeSchema.safeParse(unknownJson);
   if (!envelope.success) throw new LocalVaultError("This is not an encrypted HabitFlow backup.");
   const decrypted = await decryptJson(envelope.data, passphrase);
-  const parsed = backupSchema.safeParse(decrypted.value);
-  if (!parsed.success) throw new LocalVaultError("Backup content failed validation.", parsed.error);
-  return parsed.data;
+  
+  const v4 = backupSchemaV4.safeParse(decrypted.value);
+  if (v4.success) return v4.data;
+
+  const v3 = backupSchemaV3.safeParse(decrypted.value);
+  if (v3.success) {
+    return {
+      app: BACKUP_APP_ID,
+      schema_version: 4,
+      exported_at: v3.data.exported_at,
+      data: localVaultDataSchema.parse(v3.data.data),
+    };
+  }
+
+  const v2 = backupSchemaV2.safeParse(decrypted.value);
+  if (v2.success) {
+    return {
+      app: BACKUP_APP_ID,
+      schema_version: 4,
+      exported_at: v2.data.exported_at,
+      data: localVaultDataSchema.parse(v2.data.data),
+    };
+  }
+
+  const v1 = legacyBackupSchema.safeParse(decrypted.value);
+  if (v1.success) {
+    return {
+      app: BACKUP_APP_ID,
+      schema_version: 4,
+      exported_at: v1.data.exported_at,
+      data: localVaultDataSchema.parse(v1.data.data),
+    };
+  }
+
+  throw new LocalVaultError("Backup content failed validation.", v4.error);
 };
 
 export function validateLifeOsEntry(value: unknown, kind: "task"): LocalTask;

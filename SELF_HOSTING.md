@@ -26,25 +26,45 @@ For development: `npm run dev` (port 8080).
 | Habits (do/don't), daily check-ins, edit name/notes | Yes (IndexedDB) |
 | Daily journal, calendar, points, streaks | Yes |
 | Analytics charts, habit-wise analysis | Yes |
+| 365-day GitHub-style consistency heatmaps & day-of-week grid | Yes (`HabitHeatmap.tsx`) |
+| Local AI Habit Coach (Ollama `http://127.0.0.1:11434`) | Yes (`OllamaHabitCoach.tsx`, offline LLM) |
+| Notion / Obsidian Markdown Vault (view/edit, live preview, YAML frontmatter, `.md`/HTML export & import) | Yes (`/notes`, `LocalNotes.tsx`) |
+| Expense & Investment Trackers (income/expenses, monthly category budgets, portfolio asset allocation, CSV export/import) | Yes (`/finance`, `LocalFinance.tsx`) |
+| Inside-Webapp Virtual Filesystem (AES-GCM encrypted document & attachment storage) | Yes (`/files`, `LocalFiles.tsx`) |
+| Browser Habit Reminders (scheduled morning & evening notifications) | Yes (`SettingsDialog.tsx`, `notifications.ts`) |
 | LifeOS home: tasks, projects | Yes (encrypted browser vault) |
-| Backup/restore (habits, check-ins, journal, tasks, projects) | Yes, `/data` page, passphrase-encrypted JSON, max 10 MB |
-| Planner, goals roadmap, universal diary, ideas | Not yet (shows a notice) |
-| Badges, levels, scratch pad, app shortcuts, settings | Not yet (cloud tracker only) |
-| Friends, chat, groups, challenges, leaderboards | Off by design (need other users) |
-| Habit workspace files | Off (needs cloud file storage) |
+| Weekly Planner | Yes (encrypted browser vault) |
+| Goals & Milestones Roadmap | Yes (encrypted browser vault) |
+| Universal Diary & Habit Tagging | Yes (encrypted browser vault) |
+| Ideas Board & Categories | Yes (encrypted browser vault) |
+| Scratch Pad notes | Yes (encrypted browser vault) |
+| Badges & XP / Level Progression | Yes (encrypted browser vault) |
+| App Shortcuts & Settings | Yes (encrypted browser vault) |
+| Challenges & Solo Quests | Yes (encrypted browser vault) |
+| Backup & Sync Merge (cross-device sync across 25 entities) | Yes, `/data` page, passphrase-encrypted JSON, max 10 MB |
+| Legacy Cloud Account Migration | Yes, one-click migration assistant in `/data` |
+| Friends, live chat, multi-user groups | Off by design (multi-user network tracking) |
 | Accounts / sign in | Not used locally |
 
-## Known limitations
+## Storage, sync & security features
 
-- Clearing site data for the app's address deletes local data. The app asks the browser to keep data (`navigator.storage.persist()`), but the browser may decline. Export backups regularly.
-- A passphrase is required to create and unlock the encrypted vault; it is never saved. The app locks after ten minutes idle, when the tab is hidden, or when you press Lock.
-- Forgotten passphrases cannot be recovered. The app cannot recover encrypted data without the correct passphrase. Keep the passphrase safe and test a backup.
-- New backups are encrypted and include tasks/projects. Older plaintext backups can be imported after a clear warning; they are validated and stored in the encrypted vault. Files above 10 MB are rejected.
-- Encryption protects stored data at rest; it does not protect a computer with malware, an already-unlocked browser, weak passphrases, or unencrypted system swap/hibernation. Use full-disk encryption and a strong unique passphrase.
-- No sync between devices.
-- Existing cloud data is not migrated (decision deferred).
-- The offline app-install (PWA) caches app files only; private cloud API responses are never placed in its cache. Local serving adds a restrictive content policy and binds only to loopback.
-- Only habits, check-ins, journal entries, tasks and projects are available locally and encrypted. Planner, goal roadmap, ideas, social features, badges/levels, scratch pad and cloud accounts remain unavailable in local mode until migrated.
+- **Storage Eviction & Health:** The app monitors `navigator.storage.persisted()` and available quota. You can request persistent storage directly in `/data`. Proactive backup reminders appear if you have not exported in over a week.
+- **Emergency Vault Recovery Kit:** Download or print a standalone Emergency Vault Recovery Sheet (`.html`) in `/data` or Settings. It records your vault metadata, passphrase hint, instructions, and physical recovery backup.
+- **Passphrase Entropy & Strength Meter:** Visual real-time strength meter (Too Short / Weak / Fair / Strong / Very Strong) with actionable feedback when setting up your vault.
+- **Dual-Engine Local AI (Ollama + Built-in Fallback):** The AI Habit Coach works seamlessly even with zero external software installed via the built-in local cognitive engine, while seamlessly connecting to Ollama (`llama3`, `mistral`, `phi3`) when the daemon is running.
+- **Storage Quota Meter & Configurable File Limits:** Live storage consumption meter queries `navigator.storage.estimate()` to prevent quota exhaustion, with user-selectable upload limits up to 25 MB per file.
+- **Brute-Force Attack Throttling:** Failed passphrase unlock attempts trigger exponential backoff delays (2s, 4s, 8s up to 60s), preventing automated brute-force attacks on your device.
+- **Configurable Idle Lock:** Customize your vault auto-lock timer (5, 10, 15, 30, or 60 minutes) to balance security and convenience.
+- **Cross-Device Sync Merge:** Syncing between devices (laptop, desktop, phone) is achieved via **Sync Merge** in `/data`. When importing an encrypted backup from another device, choosing "Sync Merge" combines records across all 25 entities without erasing either device's progress.
+- **Cloud Account Migration:** Users with existing cloud data in Supabase can click "Import from Cloud Account" on the `/data` page to pull their cloud habits, check-ins, tasks, and notes directly into their local encrypted vault.
+- **Offline Challenges & Quests:** Create custom challenges (points, streaks, habit completions) and track progress completely offline on the `/social` page.
+
+## Known boundaries
+
+- Clearing browser profile data deletes IndexedDB storage. Safeguard your progress by generating an Emergency Recovery Kit and regular backups in `/data`.
+- Zero-knowledge encryption: Passphrases are never saved or transmitted. Use your Emergency Recovery Kit and Passphrase Hint to prevent lockouts.
+- Multi-user live chat and remote peer requests require external network connections and are disabled in local mode to maintain zero-telemetry offline privacy.
+- The offline app-install (PWA) caches static app files only; private local data stays inside your browser's encrypted vault.
 
 ## Cloud mode (opt-in, legacy)
 

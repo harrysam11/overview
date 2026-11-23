@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday } from "date-fns";
-import { ChevronLeft, ChevronRight, BarChart3, Calendar as CalendarIcon, Home, DatabaseBackup } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  BarChart3,
+  Calendar as CalendarIcon,
+  Home,
+  DatabaseBackup,
+  Lightbulb,
+  CalendarDays,
+  Target,
+  BookOpen,
+  Trophy,
+  ShieldAlert,
+  FileText,
+  WalletCards,
+  FolderOpen,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar } from "@/components/Calendar";
@@ -10,13 +26,27 @@ import { JournalEntry } from "@/components/JournalEntry";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnalyticsCharts } from "@/components/analytics/AnalyticsCharts";
 import { HabitWiseAnalysis } from "@/components/analytics/HabitWiseAnalysis";
+import { HabitHeatmap } from "@/components/analytics/HabitHeatmap";
+import { OllamaHabitCoach } from "@/components/ai/OllamaHabitCoach";
 import { StreakDisplay } from "@/components/StreakDisplay";
 import { LocalModeBadge } from "@/components/LocalModeBadge";
+import { AppShortcutsMenu } from "@/components/shortcuts/AppShortcutsMenu";
+import { BadgeShowcase } from "@/components/badges/BadgeShowcase";
+import { ScratchPad } from "@/components/scratchpad/ScratchPad";
+import { NewBadgeModal } from "@/components/badges/NewBadgeModal";
+import { LevelDisplay } from "@/components/level/LevelDisplay";
+import { LevelUpModal } from "@/components/level/LevelUpModal";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { useStreak } from "@/hooks/useStreak";
+import { useBadges } from "@/hooks/useBadges";
+import { useUserStats } from "@/hooks/useUserStats";
+import { useLevel } from "@/hooks/useLevel";
 import { useToast } from "@/hooks/use-toast";
 import { getHabitStore, type DailyRecord, type Habit } from "@/lib/data/habitStore";
 import { calculateDayPoints, maxDayPoints } from "@/lib/habitScoring";
 import { LocalVaultLockButton } from "@/components/LocalVaultLockButton";
+import { getLastBackupTime } from "@/lib/local/vault";
+import { checkAndTriggerHabitReminders } from "@/lib/local/notifications";
 
 const errMsg = (e: unknown, fallback: string) => (e instanceof Error && e.name === "LocalStoreError" ? e.message : fallback);
 
@@ -33,7 +63,34 @@ const LocalHabits = () => {
   const [journalContent, setJournalContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showBackupReminder, setShowBackupReminder] = useState(false);
+
+  useEffect(() => {
+    getLastBackupTime()
+      .then((last) => {
+        if (!last) {
+          if (habits.length > 0) setShowBackupReminder(true);
+        } else {
+          const diffMs = Date.now() - new Date(last).getTime();
+          if (diffMs > 7 * 24 * 60 * 60 * 1000) {
+            setShowBackupReminder(true);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [habits.length]);
+
   const { currentStreak, longestStreak, loading: streakLoading } = useStreak(habits);
+  const { stats, refetch: refetchStats } = useUserStats(currentStreak);
+  const { newBadge, dismissNewBadge, checkAndAwardBadges } = useBadges();
+  const { userLevel, loading: levelLoading, leveledUp, dismissLevelUp, addXp } = useLevel();
+
+  // Check for badges when stats change
+  useEffect(() => {
+    if (stats.habits_completed > 0 || stats.journal_entries > 0 || stats.streak_days > 0) {
+      checkAndAwardBadges(stats);
+    }
+  }, [stats, checkAndAwardBadges]);
 
   const fail = useCallback((e: unknown, fallback: string) => {
     console.error(e);
@@ -43,7 +100,10 @@ const LocalHabits = () => {
   useEffect(() => {
     getHabitStore()
       .then((s) => s.listActiveHabits())
-      .then(setHabits)
+      .then((loadedHabits) => {
+        setHabits(loadedHabits);
+        checkAndTriggerHabitReminders(loadedHabits).catch(() => {});
+      })
       .catch((e) => fail(e, "Failed to load habits."))
       .finally(() => setLoading(false));
   }, [fail]);
@@ -78,10 +138,18 @@ const LocalHabits = () => {
       const done = completedHabits.has(habitId);
       await (await getHabitStore()).setRecord(dateStr, habitId, !done);
       const next = new Set(completedHabits);
-      if (done) next.delete(habitId); else next.add(habitId);
+      if (done) {
+        next.delete(habitId);
+      } else {
+        next.add(habitId);
+        addXp(10, "Habit completed!");
+      }
       setCompletedHabits(next);
       setRefreshKey((k) => k + 1);
-    } catch (e) { fail(e, "Failed to update habit."); }
+      refetchStats();
+    } catch (e) {
+      fail(e, "Failed to update habit.");
+    }
   };
 
   const handleAddHabit = async (name: string, type: "do" | "dont") => {
@@ -110,10 +178,15 @@ const LocalHabits = () => {
 
   const handleSaveJournal = async (content: string) => {
     try {
+      const isNewEntry = !journalContent && content.trim().length > 0;
       await (await getHabitStore()).saveJournal(dateStr, content);
       setJournalContent(content);
       setRefreshKey((k) => k + 1);
       toast({ title: "Journal saved successfully!" });
+      if (isNewEntry) {
+        addXp(20, "Journal entry written!");
+      }
+      refetchStats();
     } catch (e) { fail(e, "Failed to save journal entry."); }
   };
 
@@ -148,6 +221,32 @@ const LocalHabits = () => {
             <LocalModeBadge />
           </div>
           <div className="flex items-center gap-1">
+            <AppShortcutsMenu />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/ideas")} title="Ideas Board">
+              <Lightbulb className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/planner")} title="Weekly Planner">
+              <CalendarDays className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/roadmap")} title="Goal Roadmap">
+              <Target className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/diary")} title="Universal Diary">
+              <BookOpen className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/notes")} title="Notes & Obsidian Vault">
+              <FileText className="h-5 w-5 text-indigo-500" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/finance")} title="Finance & Investments">
+              <WalletCards className="h-5 w-5 text-emerald-500" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/files")} title="Encrypted Filesystem">
+              <FolderOpen className="h-5 w-5 text-amber-500" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/social")} title="Challenges & Quests">
+              <Trophy className="h-5 w-5 text-amber-500" />
+            </Button>
+            <SettingsDialog />
             <LocalVaultLockButton />
             <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} title="LifeOS home"><Home className="h-5 w-5" /></Button>
             <Button variant="ghost" size="icon" onClick={() => navigate("/data")} title="Backup & restore"><DatabaseBackup className="h-5 w-5" /></Button>
@@ -157,6 +256,22 @@ const LocalHabits = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {showBackupReminder && (
+          <div className="mb-6 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3 text-sm">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
+              <span>Export an encrypted backup in Data to safeguard your progress on this device.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => navigate("/data")}>
+                Open Backup
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowBackupReminder(false)}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6">
             <Card>
@@ -183,6 +298,12 @@ const LocalHabits = () => {
             </Card>
 
             <StreakDisplay currentStreak={currentStreak} longestStreak={longestStreak} loading={streakLoading} />
+
+            <LevelDisplay userLevel={userLevel} loading={levelLoading} />
+
+            <BadgeShowcase />
+
+            <ScratchPad />
           </div>
 
           <div className="space-y-6">
@@ -199,9 +320,14 @@ const LocalHabits = () => {
             <JournalEntry date={selectedDate} content={journalContent} onSave={handleSaveJournal} />
             <AnalyticsCharts habits={habits} key={`charts-${refreshKey}`} />
             <HabitWiseAnalysis habits={habits} key={`hw-${refreshKey}`} />
+            <HabitHeatmap habits={habits} key={`heatmap-${refreshKey}`} />
+            <OllamaHabitCoach habits={habits} />
           </div>
         </div>
       </main>
+
+      <NewBadgeModal badge={newBadge} onDismiss={dismissNewBadge} />
+      <LevelUpModal level={leveledUp} onDismiss={dismissLevelUp} />
     </div>
   );
 };

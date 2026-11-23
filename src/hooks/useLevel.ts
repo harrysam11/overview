@@ -1,21 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getLevelStore, type LevelDefinition, type UserLevel } from "@/lib/data/levelStore";
 
-export interface LevelDefinition {
-  level: number;
-  title: string;
-  min_xp: number;
-  icon: string;
-}
-
-export interface UserLevel {
-  currentLevel: LevelDefinition;
-  nextLevel: LevelDefinition | null;
-  totalXp: number;
-  xpToNextLevel: number;
-  progressPercent: number;
-}
+export type { LevelDefinition, UserLevel };
 
 export const useLevel = () => {
   const [levels, setLevels] = useState<LevelDefinition[]>([]);
@@ -54,41 +41,15 @@ export const useLevel = () => {
 
   const fetchData = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const store = await getLevelStore();
+      const [levelDefs, xp] = await Promise.all([
+        store.listLevels(),
+        store.getTotalXp(),
+      ]);
 
-      // Fetch level definitions
-      const { data: levelDefs, error: levelError } = await supabase
-        .from("level_definitions")
-        .select("*")
-        .order("level");
-
-      if (levelError) throw levelError;
-      setLevels(levelDefs || []);
-
-      // Fetch user's XP
-      let { data: userXp, error: xpError } = await supabase
-        .from("user_levels")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (xpError) throw xpError;
-
-      // Create record if doesn't exist
-      if (!userXp) {
-        const { data: newRecord, error: insertError } = await supabase
-          .from("user_levels")
-          .insert({ user_id: user.id, total_xp: 0 })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-        userXp = newRecord;
-      }
-
-      if (levelDefs && levelDefs.length > 0) {
-        setUserLevel(calculateLevel(userXp?.total_xp || 0, levelDefs));
+      setLevels(levelDefs);
+      if (levelDefs.length > 0) {
+        setUserLevel(calculateLevel(xp, levelDefs));
       }
     } catch (error) {
       console.error("Error fetching level data:", error);
@@ -103,16 +64,11 @@ export const useLevel = () => {
 
   const addXp = useCallback(async (amount: number, reason?: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !userLevel || levels.length === 0) return;
-
-      const newTotalXp = userLevel.totalXp + amount;
+      if (!userLevel || levels.length === 0) return;
+      const store = await getLevelStore();
+      const newTotalXp = await store.addXp(amount);
       const oldLevel = userLevel.currentLevel;
       const newLevelData = calculateLevel(newTotalXp, levels);
-
-      const { error } = await supabase.rpc("increment_xp", { p_amount: amount });
-
-      if (error) throw error;
 
       setUserLevel(newLevelData);
 

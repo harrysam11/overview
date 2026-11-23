@@ -55,6 +55,14 @@ export const getLocalDb = () => {
         if (oldVersion < 2) {
           db.createObjectStore("vault", { keyPath: "id" });
         }
+        if (oldVersion < 3) {
+          // Version 3: All remaining tools migrated to the encrypted vault.
+          // Additive step: existing stores and vault records are preserved untouched.
+        }
+        if (oldVersion < 4) {
+          // Version 4: Notes, Expenses & Investments, Stored Files, AI & Notification Settings.
+          // Additive step: existing stores and encrypted records are preserved untouched.
+        }
       },
       blocked() {
         console.warn("Local database upgrade is waiting for another open tab to close.");

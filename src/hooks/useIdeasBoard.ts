@@ -1,22 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getIdeasStore, type IdeaCategory, type IdeaCard } from "@/lib/data/ideasStore";
 
-export interface IdeaCategory {
-  id: string;
-  name: string;
-  sort_order: number;
-  color: string;
-}
-
-export interface IdeaCard {
-  id: string;
-  category_id: string;
-  title: string;
-  content: string;
-  sort_order: number;
-  created_at: string;
-}
+export type { IdeaCategory, IdeaCard };
 
 export const useIdeasBoard = () => {
   const [categories, setCategories] = useState<IdeaCategory[]>([]);
@@ -26,19 +12,10 @@ export const useIdeasBoard = () => {
 
   const loadData = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const [catRes, cardRes] = await Promise.all([
-        supabase.from("idea_categories").select("*").eq("user_id", user.id).order("sort_order"),
-        supabase.from("idea_cards").select("*").eq("user_id", user.id).order("sort_order"),
-      ]);
-
-      if (catRes.error) throw catRes.error;
-      if (cardRes.error) throw cardRes.error;
-
-      setCategories(catRes.data || []);
-      setCards(cardRes.data || []);
+      const store = await getIdeasStore();
+      const { categories: cats, cards: c } = await store.listData();
+      setCategories(cats);
+      setCards(c);
     } catch {
       toast({ description: "Failed to load ideas board.", variant: "destructive" });
     } finally {
@@ -46,21 +23,15 @@ export const useIdeasBoard = () => {
     }
   }, [toast]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const addCategory = async (name: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("idea_categories")
-        .insert({ user_id: user.id, name, sort_order: categories.length })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setCategories([...categories, data as IdeaCategory]);
+      const store = await getIdeasStore();
+      const newCat = await store.addCategory(name);
+      setCategories((prev) => [...prev, newCat]);
     } catch {
       toast({ description: "Failed to add category.", variant: "destructive" });
     }
@@ -68,10 +39,10 @@ export const useIdeasBoard = () => {
 
   const deleteCategory = async (id: string) => {
     try {
-      const { error } = await supabase.from("idea_categories").delete().eq("id", id);
-      if (error) throw error;
-      setCategories(categories.filter(c => c.id !== id));
-      setCards(cards.filter(c => c.category_id !== id));
+      const store = await getIdeasStore();
+      await store.deleteCategory(id);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      setCards((prev) => prev.filter((c) => c.category_id !== id));
     } catch {
       toast({ description: "Failed to delete category.", variant: "destructive" });
     }
@@ -79,18 +50,9 @@ export const useIdeasBoard = () => {
 
   const addCard = async (categoryId: string, title: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const categoryCards = cards.filter(c => c.category_id === categoryId);
-      const { data, error } = await supabase
-        .from("idea_cards")
-        .insert({ user_id: user.id, category_id: categoryId, title, sort_order: categoryCards.length })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setCards([...cards, data as IdeaCard]);
+      const store = await getIdeasStore();
+      const newCard = await store.addCard(categoryId, title);
+      setCards((prev) => [...prev, newCard]);
     } catch {
       toast({ description: "Failed to add card.", variant: "destructive" });
     }
@@ -98,9 +60,9 @@ export const useIdeasBoard = () => {
 
   const updateCard = async (id: string, updates: Partial<Pick<IdeaCard, "title" | "content">>) => {
     try {
-      const { error } = await supabase.from("idea_cards").update(updates).eq("id", id);
-      if (error) throw error;
-      setCards(cards.map(c => c.id === id ? { ...c, ...updates } : c));
+      const store = await getIdeasStore();
+      await store.updateCard(id, updates);
+      setCards((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
     } catch {
       toast({ description: "Failed to update card.", variant: "destructive" });
     }
@@ -108,9 +70,9 @@ export const useIdeasBoard = () => {
 
   const deleteCard = async (id: string) => {
     try {
-      const { error } = await supabase.from("idea_cards").delete().eq("id", id);
-      if (error) throw error;
-      setCards(cards.filter(c => c.id !== id));
+      const store = await getIdeasStore();
+      await store.deleteCard(id);
+      setCards((prev) => prev.filter((c) => c.id !== id));
     } catch {
       toast({ description: "Failed to delete card.", variant: "destructive" });
     }
@@ -118,12 +80,9 @@ export const useIdeasBoard = () => {
 
   const moveCard = async (cardId: string, newCategoryId: string) => {
     try {
-      const { error } = await supabase
-        .from("idea_cards")
-        .update({ category_id: newCategoryId })
-        .eq("id", cardId);
-      if (error) throw error;
-      setCards(cards.map(c => c.id === cardId ? { ...c, category_id: newCategoryId } : c));
+      const store = await getIdeasStore();
+      await store.moveCard(cardId, newCategoryId);
+      setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, category_id: newCategoryId } : c)));
     } catch {
       toast({ description: "Failed to move card.", variant: "destructive" });
     }

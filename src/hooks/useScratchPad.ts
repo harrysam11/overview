@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getScratchPadStore } from "@/lib/data/scratchPadStore";
 
 export const useScratchPad = () => {
   const [content, setContent] = useState("");
@@ -15,17 +15,9 @@ export const useScratchPad = () => {
 
   const loadScratchPad = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("scratch_pad")
-        .select("content")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (error) throw error;
-      setContent(data?.content || "");
+      const store = await getScratchPadStore();
+      const text = await store.getNotes();
+      setContent(text);
     } catch (error) {
       console.error("Failed to load scratch pad:", error);
     } finally {
@@ -36,17 +28,8 @@ export const useScratchPad = () => {
   const save = useCallback(async (newContent: string) => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from("scratch_pad")
-        .upsert(
-          { user_id: user.id, content: newContent },
-          { onConflict: "user_id" }
-        );
-
-      if (error) throw error;
+      const store = await getScratchPadStore();
+      await store.saveNotes(newContent);
     } catch (error) {
       toast({
         description: "Failed to save notes. Please try again.",
@@ -69,7 +52,6 @@ export const useScratchPad = () => {
     }, 1500);
   }, [save]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {

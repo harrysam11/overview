@@ -14,7 +14,11 @@ import NotFound from "./pages/NotFound";
 // Local-mode pages (never import the cloud client).
 const LocalHabits = lazy(() => import("./pages/LocalHabits"));
 const LocalData = lazy(() => import("./pages/LocalData"));
+const LocalSocial = lazy(() => import("./pages/LocalSocial"));
 const LocalOnlyNotice = lazy(() => import("./pages/LocalOnlyNotice"));
+const LocalNotes = lazy(() => import("./pages/LocalNotes"));
+const LocalFinance = lazy(() => import("./pages/LocalFinance"));
+const LocalFiles = lazy(() => import("./pages/LocalFiles"));
 
 // Cloud-mode pages: loaded only when VITE_DATA_MODE=cloud, so local mode makes no cloud requests.
 const Auth = lazy(() => import("./pages/Auth"));
@@ -43,11 +47,14 @@ const localRoutes = (
     <Route path="/data" element={<LocalData />} />
     <Route path="/auth" element={<LifeOS />} />
     <Route path="/reset-password" element={<LifeOS />} />
-    <Route path="/social" element={<LocalOnlyNotice feature="Friends, chat & challenges" reason="online" />} />
-    <Route path="/ideas" element={<LocalOnlyNotice feature="Ideas board" reason="later" />} />
-    <Route path="/planner" element={<LocalOnlyNotice feature="Weekly planner" reason="later" />} />
-    <Route path="/roadmap" element={<LocalOnlyNotice feature="Goal roadmap" reason="later" />} />
-    <Route path="/diary" element={<LocalOnlyNotice feature="Universal diary" reason="later" />} />
+    <Route path="/social" element={<LocalSocial />} />
+    <Route path="/ideas" element={<IdeasBoard />} />
+    <Route path="/planner" element={<WeeklyPlanner />} />
+    <Route path="/roadmap" element={<GoalRoadmap />} />
+    <Route path="/diary" element={<Diary />} />
+    <Route path="/notes" element={<LocalNotes />} />
+    <Route path="/finance" element={<LocalFinance />} />
+    <Route path="/files" element={<LocalFiles />} />
   </>
 );
 
@@ -61,6 +68,9 @@ const cloudRoutes = (
     <Route path="/roadmap" element={<GoalRoadmap />} />
     <Route path="/diary" element={<Diary />} />
     <Route path="/reset-password" element={<ResetPassword />} />
+    <Route path="/notes" element={<LocalNotes />} />
+    <Route path="/finance" element={<LocalFinance />} />
+    <Route path="/files" element={<LocalFiles />} />
   </>
 );
 

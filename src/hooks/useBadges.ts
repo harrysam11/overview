@@ -1,32 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getBadgeStore, type Badge, type UserBadge, type UserStats } from "@/lib/data/badgeStore";
 
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  category: string;
-  requirement_type: string;
-  requirement_value: number;
-  rarity: "common" | "rare" | "epic" | "legendary";
-}
-
-export interface UserBadge {
-  id: string;
-  badge_id: string;
-  earned_at: string;
-  badge: Badge;
-}
-
-export interface UserStats {
-  streak_days: number;
-  habits_completed: number;
-  journal_entries: number;
-  total_points: number;
-  friends_count: number;
-}
+export type { Badge, UserBadge, UserStats };
 
 export const useBadges = () => {
   const [allBadges, setAllBadges] = useState<Badge[]>([]);
@@ -37,33 +13,13 @@ export const useBadges = () => {
 
   const fetchBadges = useCallback(async () => {
     try {
-      const { data: badges, error: badgesError } = await supabase
-        .from("badges")
-        .select("*")
-        .order("requirement_value");
-
-      if (badgesError) throw badgesError;
-      setAllBadges((badges || []) as Badge[]);
-
-      const { data: userBadges, error: userBadgesError } = await supabase
-        .from("user_badges")
-        .select(`
-          id,
-          badge_id,
-          earned_at,
-          badge:badges(*)
-        `);
-
-      if (userBadgesError) throw userBadgesError;
-      
-      const formattedBadges = (userBadges || []).map((ub: any) => ({
-        id: ub.id,
-        badge_id: ub.badge_id,
-        earned_at: ub.earned_at,
-        badge: ub.badge
-      }));
-      
-      setEarnedBadges(formattedBadges);
+      const store = await getBadgeStore();
+      const [all, earned] = await Promise.all([
+        store.listAllBadges(),
+        store.listEarnedBadges(),
+      ]);
+      setAllBadges(all);
+      setEarnedBadges(earned);
     } catch (error) {
       console.error("Error fetching badges:", error);
     } finally {
@@ -76,16 +32,14 @@ export const useBadges = () => {
   }, [fetchBadges]);
 
   const checkAndAwardBadges = useCallback(async (stats: UserStats) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const store = await getBadgeStore();
+    const earnedBadgeIds = new Set(earnedBadges.map((eb) => eb.badge_id));
 
-    const earnedBadgeIds = new Set(earnedBadges.map(eb => eb.badge_id));
-    
     for (const badge of allBadges) {
       if (earnedBadgeIds.has(badge.id)) continue;
 
       let qualified = false;
-      
+
       switch (badge.requirement_type) {
         case "streak_days":
           qualified = stats.streak_days >= badge.requirement_value;
@@ -105,13 +59,8 @@ export const useBadges = () => {
       }
 
       if (qualified) {
-        const { data: awarded, error } = await supabase
-          .rpc("award_badge_if_earned", {
-            p_user_id: user.id,
-            p_badge_id: badge.id
-          });
-
-        if (!error && awarded) {
+        const awarded = await store.awardBadge(badge.id);
+        if (awarded) {
           setNewBadge(badge);
           toast({
             title: "🏆 Badge Earned!",
@@ -128,11 +77,11 @@ export const useBadges = () => {
   }, []);
 
   const getBadgesByCategory = useCallback((category: string) => {
-    return allBadges.filter(b => b.category === category);
+    return allBadges.filter((b) => b.category === category);
   }, [allBadges]);
 
   const isEarned = useCallback((badgeId: string) => {
-    return earnedBadges.some(eb => eb.badge_id === badgeId);
+    return earnedBadges.some((eb) => eb.badge_id === badgeId);
   }, [earnedBadges]);
 
   return {
@@ -144,6 +93,6 @@ export const useBadges = () => {
     dismissNewBadge,
     getBadgesByCategory,
     isEarned,
-    refetch: fetchBadges
+    refetch: fetchBadges,
   };
 };

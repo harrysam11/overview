@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { isLocalMode } from "@/lib/appMode";
+import { getChallengeStore } from "@/lib/data/challengeStore";
 import { useToast } from "@/hooks/use-toast";
 
 export type ChallengeGoalType = "points" | "streak_days" | "habits_completed";
@@ -48,6 +49,11 @@ export interface CreateChallengeInput {
   is_public?: boolean;
 }
 
+const getSupabase = async () => {
+  const { supabase } = await import("@/integrations/supabase/client");
+  return supabase;
+};
+
 export const useChallenges = () => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [participants, setParticipants] = useState<Map<string, ChallengeParticipant[]>>(new Map());
@@ -57,10 +63,39 @@ export const useChallenges = () => {
 
   const loadChallenges = useCallback(async () => {
     try {
+      if (isLocalMode()) {
+        const store = await getChallengeStore();
+        await store.syncAllProgress();
+        const list = await store.listChallenges();
+        const challengesWithProfiles: Challenge[] = list.map((c) => ({
+          ...c,
+          creator_profile: { display_name: "You" },
+        }));
+        setChallenges(challengesWithProfiles);
+
+        const participantsMap = new Map<string, ChallengeParticipant[]>();
+        for (const c of list) {
+          const parts = await store.listParticipants(c.id);
+          participantsMap.set(
+            c.id,
+            parts.map((p) => ({
+              id: p.id,
+              challenge_id: p.challenge_id,
+              user_id: p.user_id,
+              progress: p.progress,
+              joined_at: p.joined_at,
+              profile: { display_name: p.profile_name || "You", avatar_url: null },
+            }))
+          );
+        }
+        setParticipants(participantsMap);
+        return;
+      }
+
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get challenges user participates in
       const { data: participantData, error: participantError } = await supabase
         .from("challenge_participants")
         .select("challenge_id")
@@ -68,7 +103,7 @@ export const useChallenges = () => {
 
       if (participantError) throw participantError;
 
-      const challengeIds = participantData?.map(p => p.challenge_id) || [];
+      const challengeIds = participantData?.map((p) => p.challenge_id) || [];
 
       if (challengeIds.length > 0) {
         const { data: challengesData, error: challengesError } = await supabase
@@ -79,24 +114,22 @@ export const useChallenges = () => {
 
         if (challengesError) throw challengesError;
 
-        // Get creator profiles
-        const creatorIds = [...new Set(challengesData?.map(c => c.creator_id) || [])];
+        const creatorIds = [...new Set(challengesData?.map((c) => c.creator_id) || [])];
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, display_name")
           .in("id", creatorIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-        
-        const challengesWithProfiles = (challengesData || []).map(c => ({
+        const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+        const challengesWithProfiles = (challengesData || []).map((c) => ({
           ...c,
           goal_type: c.goal_type as ChallengeGoalType,
-          creator_profile: profileMap.get(c.creator_id)
+          creator_profile: profileMap.get(c.creator_id),
         }));
 
         setChallenges(challengesWithProfiles);
 
-        // Load participants for each challenge
         const participantsMap = new Map<string, ChallengeParticipant[]>();
         for (const challengeId of challengeIds) {
           const { data: participantsData } = await supabase
@@ -106,16 +139,16 @@ export const useChallenges = () => {
             .order("progress", { ascending: false });
 
           if (participantsData && participantsData.length > 0) {
-            const userIds = participantsData.map(p => p.user_id);
+            const userIds = participantsData.map((p) => p.user_id);
             const { data: userProfiles } = await supabase
               .from("profiles")
               .select("id, display_name, avatar_url")
               .in("id", userIds);
 
-            const userProfileMap = new Map(userProfiles?.map(p => [p.id, p]) || []);
-            const withProfiles = participantsData.map(p => ({
+            const userProfileMap = new Map(userProfiles?.map((p) => [p.id, p]) || []);
+            const withProfiles = participantsData.map((p) => ({
               ...p,
-              profile: userProfileMap.get(p.user_id)
+              profile: userProfileMap.get(p.user_id),
             }));
             participantsMap.set(challengeId, withProfiles);
           }
@@ -123,8 +156,9 @@ export const useChallenges = () => {
         setParticipants(participantsMap);
       } else {
         setChallenges([]);
+        setParticipants(new Map());
       }
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to load challenges",
         variant: "destructive",
@@ -133,7 +167,12 @@ export const useChallenges = () => {
   }, [toast]);
 
   const loadInvites = useCallback(async () => {
+    if (isLocalMode()) {
+      setInvites([]);
+      return;
+    }
     try {
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -146,36 +185,36 @@ export const useChallenges = () => {
       if (error) throw error;
 
       if (invitesData && invitesData.length > 0) {
-        // Get challenge details
-        const challengeIds = [...new Set(invitesData.map(i => i.challenge_id))];
+        const challengeIds = [...new Set(invitesData.map((i) => i.challenge_id))];
         const { data: challengesData } = await supabase
           .from("challenges")
           .select("*")
           .in("id", challengeIds);
 
-        const challengeMap = new Map(challengesData?.map(c => [c.id, { ...c, goal_type: c.goal_type as ChallengeGoalType }]) || []);
+        const challengeMap = new Map(
+          challengesData?.map((c) => [c.id, { ...c, goal_type: c.goal_type as ChallengeGoalType }]) || []
+        );
 
-        // Get sender profiles
-        const fromIds = [...new Set(invitesData.map(i => i.from_user_id))];
+        const fromIds = [...new Set(invitesData.map((i) => i.from_user_id))];
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, display_name")
           .in("id", fromIds);
 
-        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
 
-        const withDetails = invitesData.map(i => ({
+        const withDetails = invitesData.map((i) => ({
           ...i,
           status: i.status as "pending" | "accepted" | "rejected",
           challenge: challengeMap.get(i.challenge_id),
-          from_profile: profileMap.get(i.from_user_id)
+          from_profile: profileMap.get(i.from_user_id),
         }));
 
         setInvites(withDetails);
       } else {
         setInvites([]);
       }
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to load challenge invites",
         variant: "destructive",
@@ -194,6 +233,15 @@ export const useChallenges = () => {
 
   const createChallenge = async (input: CreateChallengeInput) => {
     try {
+      if (isLocalMode()) {
+        const store = await getChallengeStore();
+        const created = await store.createChallenge(input);
+        toast({ title: "Challenge created!" });
+        await loadChallenges();
+        return created;
+      }
+
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -208,18 +256,15 @@ export const useChallenges = () => {
 
       if (error) throw error;
 
-      // Auto-join creator as participant
-      await supabase
-        .from("challenge_participants")
-        .insert({
-          challenge_id: challenge.id,
-          user_id: user.id,
-        });
+      await supabase.from("challenge_participants").insert({
+        challenge_id: challenge.id,
+        user_id: user.id,
+      });
 
       toast({ title: "Challenge created!" });
       await loadChallenges();
       return challenge;
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to create challenge",
         variant: "destructive",
@@ -229,16 +274,20 @@ export const useChallenges = () => {
   };
 
   const inviteFriend = async (challengeId: string, friendId: string) => {
+    if (isLocalMode()) {
+      toast({ title: "Local Mode", description: "Challenges run directly on this device. Peer sync is available in Data." });
+      return;
+    }
     try {
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Use rate-limited Edge Function
-      const { data, error } = await supabase.functions.invoke('rate-limited-action', {
+      const { data, error } = await supabase.functions.invoke("rate-limited-action", {
         body: {
-          action: 'challenge_invite',
-          data: { challengeId, friendId }
-        }
+          action: "challenge_invite",
+          data: { challengeId, friendId },
+        },
       });
 
       if (error) throw error;
@@ -252,18 +301,19 @@ export const useChallenges = () => {
       toast({ title: "Invite sent!" });
     } catch (error: any) {
       toast({
-        description: "Failed to send invite",
+        description: error?.message || "Failed to send invite",
         variant: "destructive",
       });
     }
   };
 
   const acceptInvite = async (inviteId: string, challengeId: string) => {
+    if (isLocalMode()) return;
     try {
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Update invite status
       const { error: updateError } = await supabase
         .from("challenge_invites")
         .update({ status: "accepted" })
@@ -271,7 +321,6 @@ export const useChallenges = () => {
 
       if (updateError) throw updateError;
 
-      // Join challenge
       const { error: joinError } = await supabase
         .from("challenge_participants")
         .insert({
@@ -283,7 +332,7 @@ export const useChallenges = () => {
 
       toast({ title: "You joined the challenge!" });
       await Promise.all([loadChallenges(), loadInvites()]);
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to accept invite",
         variant: "destructive",
@@ -292,7 +341,9 @@ export const useChallenges = () => {
   };
 
   const rejectInvite = async (inviteId: string) => {
+    if (isLocalMode()) return;
     try {
+      const supabase = await getSupabase();
       const { error } = await supabase
         .from("challenge_invites")
         .update({ status: "rejected" })
@@ -301,7 +352,7 @@ export const useChallenges = () => {
       if (error) throw error;
       toast({ title: "Invite declined" });
       await loadInvites();
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to decline invite",
         variant: "destructive",
@@ -311,6 +362,15 @@ export const useChallenges = () => {
 
   const leaveChallenge = async (challengeId: string) => {
     try {
+      if (isLocalMode()) {
+        const store = await getChallengeStore();
+        await store.deleteChallenge(challengeId);
+        toast({ title: "Challenge removed" });
+        await loadChallenges();
+        return;
+      }
+
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -323,7 +383,7 @@ export const useChallenges = () => {
       if (error) throw error;
       toast({ title: "You left the challenge" });
       await loadChallenges();
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to leave challenge",
         variant: "destructive",
@@ -332,7 +392,12 @@ export const useChallenges = () => {
   };
 
   const updateProgress = async (challengeId: string, progress: number) => {
+    if (isLocalMode()) {
+      await loadChallenges();
+      return;
+    }
     try {
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -344,7 +409,7 @@ export const useChallenges = () => {
 
       if (error) throw error;
       await loadChallenges();
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to update progress",
         variant: "destructive",
@@ -354,10 +419,18 @@ export const useChallenges = () => {
 
   const deleteChallenge = async (challengeId: string) => {
     try {
+      if (isLocalMode()) {
+        const store = await getChallengeStore();
+        await store.deleteChallenge(challengeId);
+        toast({ title: "Challenge deleted" });
+        await loadChallenges();
+        return;
+      }
+
+      const supabase = await getSupabase();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Verify ownership first before any deletions
       const { data: challenge, error: verifyError } = await supabase
         .from("challenges")
         .select("id")
@@ -369,29 +442,14 @@ export const useChallenges = () => {
         throw new Error("Not authorized to delete this challenge");
       }
 
-      // Delete participants (only after ownership verified)
-      await supabase
-        .from("challenge_participants")
-        .delete()
-        .eq("challenge_id", challengeId);
-
-      // Delete invites (only after ownership verified)
-      await supabase
-        .from("challenge_invites")
-        .delete()
-        .eq("challenge_id", challengeId);
-
-      // Delete challenge
-      const { error } = await supabase
-        .from("challenges")
-        .delete()
-        .eq("id", challengeId)
-        .eq("creator_id", user.id);
+      await supabase.from("challenge_participants").delete().eq("challenge_id", challengeId);
+      await supabase.from("challenge_invites").delete().eq("challenge_id", challengeId);
+      const { error } = await supabase.from("challenges").delete().eq("id", challengeId).eq("creator_id", user.id);
 
       if (error) throw error;
       toast({ title: "Challenge deleted" });
       await loadChallenges();
-    } catch (error: any) {
+    } catch {
       toast({
         description: "Failed to delete challenge",
         variant: "destructive",
@@ -409,8 +467,8 @@ export const useChallenges = () => {
     acceptInvite,
     rejectInvite,
     leaveChallenge,
-    deleteChallenge,
     updateProgress,
-    refresh: () => Promise.all([loadChallenges(), loadInvites()]),
+    deleteChallenge,
+    refresh: loadChallenges,
   };
 };
