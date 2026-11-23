@@ -2,23 +2,63 @@
 
 Local mode is the default. Habits, check-ins, journal, tasks and projects stay on this computer in an encrypted browser vault; no account or cloud requests are needed.
 
-## Run on Zorin OS / Ubuntu (verified commands)
+## Quick Start (Docker / 1-Command)
+
+The easiest way to self-host HabitFlow for desktop and mobile devices:
+
+```bash
+git clone https://github.com/harrysam11/overview.git habitflow && cd habitflow
+docker compose up -d
+```
+
+Open `http://localhost:8080` or `http://<your-server-ip>:8080` from any device on your local network.
+
+---
+
+## Run with Node.js (Ubuntu, Linux, macOS, Windows)
 
 Requires Node.js 20+ (tested with Node 22).
 
 ```bash
-git clone <your-github-repo-url> habitflow && cd habitflow
+git clone https://github.com/harrysam11/overview.git habitflow && cd habitflow
 npm ci
-npm test          # unit tests for the local data layer
-npm run build     # outputs dist/
-npx vite preview --host 127.0.0.1 --port 4173
+npm test          # 44/44 unit tests for local storage and encryption
+npm run build     # outputs production dist/
+npx vite preview --host 0.0.0.0 --port 4173
 ```
 
-Open http://127.0.0.1:4173. Keep the app bound to 127.0.0.1 so it is not reachable from your network.
-Data is tied to that exact address and browser profile: always use the same URL and browser. Secure browser encryption requires localhost or HTTPS.
+- Local-only: `npx vite preview --host 127.0.0.1 --port 4173`
+- Development: `npm run dev` (port 8080)
 
-For development: `npm run dev` (port 8080).
+---
 
+## 📱 Mobile Self-Hosting (iOS & Android)
+
+HabitFlow is a fully offline **Progressive Web App (PWA)** that runs smoothly on smartphones and tablets.
+
+### 1. Connecting Your Phone
+- **Home Wi-Fi:** Ensure your phone is on the same Wi-Fi network as your host computer. Open `http://<host-ip>:8080` (or `:4173`) in your phone's browser.
+- **Remote / Anywhere (Tailscale or WireGuard):** Use a free personal mesh VPN like [Tailscale](https://tailscale.com) on your computer and phone to securely access your self-hosted instance from anywhere with zero port forwarding.
+
+### 2. Installing as a Native App
+- **iOS (iPhone/iPad in Safari):**
+  1. Open HabitFlow in Safari.
+  2. Tap the **Share** button (box with an arrow pointing up).
+  3. Scroll down and tap **"Add to Home Screen"**.
+  4. Launch HabitFlow from your home screen — it runs in full-screen standalone mode with zero address bar.
+- **Android (Chrome):**
+  1. Open HabitFlow in Chrome.
+  2. Tap the **three dots menu (⋮)** in the top right.
+  3. Tap **"Install app"** or **"Add to Home screen"**.
+  4. Launch the standalone app from your app drawer or home screen.
+
+### 3. Syncing Mobile & Desktop (Zero Cloud)
+Because data is encrypted inside the device's local browser vault:
+- To sync between your phone and computer, go to **Data (`/data`)** on device A and click **Export Encrypted Backup**.
+- Send the `.json` file to device B (via AirDrop, LocalSend, or messaging).
+- On device B, click **Restore**, select the file, enter your passphrase, and choose **Sync Merge**. All habits, check-ins, notes, and finance records merge cleanly without overwriting either device!
+
+---
 ## What works locally
 
 | Area | Local mode |
