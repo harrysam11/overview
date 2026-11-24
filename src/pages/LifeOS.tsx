@@ -23,6 +23,7 @@ import {
   Trophy,
   Users,
   WalletCards,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallAppDialog } from "@/components/InstallAppDialog";
 import { useStreak } from "@/hooks/useStreak";
 import { getHabitStore } from "@/lib/data/habitStore";
 import { isLocalMode } from "@/lib/appMode";
@@ -185,7 +187,19 @@ const LifeOS = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/roadmap")}>Goals</Button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/diary")}>Diary</Button>
           </nav>
-          <div className="flex items-center gap-2">{isLocalMode && <LocalModeBadge />}<ThemeToggle /><Button variant="outline" size="sm" onClick={() => navigate("/habits")}>Open tracker <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button></div>
+          <div className="flex items-center gap-2">
+            {isLocalMode && <LocalModeBadge />}
+            <InstallAppDialog
+              trigger={
+                <Button variant="ghost" size="sm" className="gap-1.5 hidden lg:flex text-xs">
+                  <Download className="h-3.5 w-3.5" />
+                  Install App
+                </Button>
+              }
+            />
+            <ThemeToggle />
+            <Button variant="outline" size="sm" onClick={() => navigate("/habits")}>Open tracker <ArrowRight className="ml-2 h-3.5 w-3.5" /></Button>
+          </div>
         </div>
       </header>
 

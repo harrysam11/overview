@@ -26,8 +26,10 @@ import {
   Map,
   ListTodo,
   BriefcaseBusiness,
+  Download,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallAppDialog } from "@/components/InstallAppDialog";
 
 const features = [
   {
@@ -181,6 +183,14 @@ const Landing = () => {
             <a href="#categories" className="text-muted-foreground hover:text-foreground transition-colors">Explore</a>
           </nav>
           <div className="flex items-center gap-2">
+            <InstallAppDialog
+              trigger={
+                <Button variant="outline" size="sm" className="gap-1.5 hidden sm:flex">
+                  <Download className="h-3.5 w-3.5" />
+                  Install App
+                </Button>
+              }
+            />
             <ThemeToggle />
             {authed ? (
               <Button onClick={() => navigate("/dashboard")} size="sm">
@@ -217,6 +227,14 @@ const Landing = () => {
                 {authed ? (isLocalMode ? "Open LifeOS" : "Open Dashboard") : "Get Started Free"}
                 <ArrowRight className="h-4 w-4" />
               </Button>
+              <InstallAppDialog
+                trigger={
+                  <Button size="lg" variant="secondary" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Download for Mobile & Web
+                  </Button>
+                }
+              />
               <Button size="lg" variant="outline" asChild>
                 <a href="#features">Explore Features</a>
               </Button>
