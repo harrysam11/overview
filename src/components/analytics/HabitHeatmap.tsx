@@ -1,27 +1,49 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, subDays, eachDayOfInterval, isSameDay } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Flame, Calendar, CheckCircle2, TrendingUp } from "lucide-react";
-import type { DailyRecord, Habit } from "@/lib/data/habitStore";
+import { getHabitStore, type DailyRecord, type Habit } from "@/lib/data/habitStore";
 
 interface HabitHeatmapProps {
-  habits: Habit[];
-  records: DailyRecord[];
+  habits?: Habit[];
+  records?: DailyRecord[];
   daysCount?: number;
 }
 
-export const HabitHeatmap = ({ habits, records, daysCount = 180 }: HabitHeatmapProps) => {
+export const HabitHeatmap = ({ habits = [], records: externalRecords, daysCount = 180 }: HabitHeatmapProps) => {
   const [selectedDay, setSelectedDay] = useState<{ date: string; completed: number; total: number; pct: number } | null>(null);
+  const [internalRecords, setInternalRecords] = useState<DailyRecord[]>([]);
+
+  useEffect(() => {
+    if (externalRecords !== undefined) return;
+    let mounted = true;
+    const today = new Date();
+    const startDate = subDays(today, daysCount);
+    getHabitStore()
+      .then((store) => store.listRecords(format(startDate, "yyyy-MM-dd"), format(today, "yyyy-MM-dd")))
+      .then((data) => {
+        if (mounted && Array.isArray(data)) {
+          setInternalRecords(data);
+        }
+      })
+      .catch((err) => console.error("Error loading heatmap records:", err));
+    return () => {
+      mounted = false;
+    };
+  }, [externalRecords, daysCount]);
+
+  const effectiveRecords = externalRecords !== undefined ? externalRecords : internalRecords;
 
   const { days, statsByDate, activeDays, totalChecks, maxStreak } = useMemo(() => {
     const today = new Date();
     const startDate = subDays(today, daysCount - 1);
     const intervalDays = eachDayOfInterval({ start: startDate, end: today });
 
+    const safeRecords = Array.isArray(effectiveRecords) ? effectiveRecords : [];
     const recordMap = new Map<string, number>();
-    for (const r of records) {
-      if (r.completed) {
+    for (const r of safeRecords) {
+      if (r?.completed && r.record_date) {
         recordMap.set(r.record_date, (recordMap.get(r.record_date) || 0) + 1);
       }
     }
@@ -29,11 +51,12 @@ export const HabitHeatmap = ({ habits, records, daysCount = 180 }: HabitHeatmapP
     let activeCount = 0;
     let checksCount = 0;
     const stats = new Map<string, { completed: number; total: number; pct: number }>();
+    const safeHabitsCount = habits?.length || 1;
 
     for (const d of intervalDays) {
       const dStr = format(d, "yyyy-MM-dd");
       const completed = recordMap.get(dStr) || 0;
-      const total = habits.length || 1;
+      const total = safeHabitsCount;
       const pct = Math.min(100, Math.round((completed / total) * 100));
 
       stats.set(dStr, { completed, total, pct });
@@ -48,7 +71,7 @@ export const HabitHeatmap = ({ habits, records, daysCount = 180 }: HabitHeatmapP
       totalChecks: checksCount,
       maxStreak: 0,
     };
-  }, [habits, records, daysCount]);
+  }, [habits, effectiveRecords, daysCount]);
 
   const getColorClass = (pct: number) => {
     if (pct === 0) return "bg-muted/60 border-muted hover:border-foreground/30";
