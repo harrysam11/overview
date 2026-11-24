@@ -21,6 +21,9 @@ import {
   Code,
   List,
   Quote,
+  FolderOpen,
+  HardDrive,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,20 +171,123 @@ export const LocalNotes = () => {
     toast({ title: "Downloaded as HTML" });
   };
 
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Obsidian Vault Folder connection
+  const [vaultDirHandle, setVaultDirHandle] = useState<any>(null);
+  const [connectedFolderName, setConnectedFolderName] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleConnectLocalVault = async () => {
+    if (!("showDirectoryPicker" in window)) {
+      toast({
+        title: "File System API unavailable",
+        description: "Your browser does not support folder access. Use 'Import .md' to select files from disk.",
+      });
+      return;
+    }
     try {
-      const text = await file.text();
+      const handle = await (window as any).showDirectoryPicker({
+        mode: "readwrite",
+        startIn: "documents",
+      });
+      setVaultDirHandle(handle);
+      setConnectedFolderName(handle.name);
+
+      let importedCount = 0;
       const store = await getNotesStore();
-      const created = await store.importMarkdownNote(file.name, text);
+      for await (const entry of handle.values()) {
+        if (entry.kind === "file" && (entry.name.endsWith(".md") || entry.name.endsWith(".markdown") || entry.name.endsWith(".txt"))) {
+          const file = await entry.getFile();
+          const content = await file.text();
+          await store.importMarkdownNote(entry.name, content);
+          importedCount++;
+        }
+      }
       await loadNotes();
-      selectNote(created);
-      toast({ title: "Imported note", description: created.title });
+      toast({
+        title: "Obsidian Vault Linked",
+        description: `Connected "${handle.name}". Loaded ${importedCount} markdown notes from local disk.`,
+      });
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        toast({ description: "Could not open local folder", variant: "destructive" });
+      }
+    }
+  };
+
+  const handleSyncToLocalVault = async () => {
+    if (!vaultDirHandle) return;
+    setIsSyncing(true);
+    try {
+      const store = await getNotesStore();
+      const currentNotes = await store.listNotes();
+      let savedCount = 0;
+      for (const note of currentNotes) {
+        const safeName = `${note.title.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")}.md`;
+        const fileHandle = await vaultDirHandle.getFileHandle(safeName, { create: true });
+        const writable = await fileHandle.createWritable();
+        const mdContent = store.exportNoteToMarkdown(note);
+        await writable.write(mdContent);
+        await writable.close();
+        savedCount++;
+      }
+      toast({
+        title: "Vault Synced to Local Disk",
+        description: `Wrote ${savedCount} .md files into "${connectedFolderName}".`,
+      });
     } catch {
-      toast({ description: "Failed to import markdown file", variant: "destructive" });
+      toast({ description: "Failed writing notes to local directory", variant: "destructive" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleImportFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    try {
+      const store = await getNotesStore();
+      let count = 0;
+      let lastCreated: NoteItem | null = null;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const text = await file.text();
+        lastCreated = await store.importMarkdownNote(file.name, text);
+        count++;
+      }
+      await loadNotes();
+      if (lastCreated) selectNote(lastCreated);
+      toast({
+        title: "Import Complete",
+        description: `Imported ${count} markdown note${count > 1 ? "s" : ""} from your computer.`,
+      });
+    } catch {
+      toast({ description: "Failed to import markdown file(s)", variant: "destructive" });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleExportAllNotes = async () => {
+    try {
+      const store = await getNotesStore();
+      const allNotes = await store.listNotes();
+      if (allNotes.length === 0) {
+        toast({ description: "No notes to export" });
+        return;
+      }
+      for (const note of allNotes) {
+        const md = store.exportNoteToMarkdown(note);
+        const blob = new Blob([md], { type: "text/markdown" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${note.title.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")}.md`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      toast({ title: "Export Complete", description: `Downloaded ${allNotes.length} markdown notes.` });
+    } catch {
+      toast({ description: "Failed exporting notes", variant: "destructive" });
     }
   };
 
@@ -262,18 +368,43 @@ export const LocalNotes = () => {
             </Button>
             <div className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-indigo-500" />
-              <h1 className="font-semibold text-lg">Obsidian / Markdown Vault</h1>
+              <h1 className="font-semibold text-lg hidden sm:inline">Obsidian / Markdown Vault</h1>
             </div>
             <LocalModeBadge />
+            {connectedFolderName && (
+              <Badge variant="secondary" className="gap-1.5 text-xs font-mono hidden md:flex items-center">
+                <FolderOpen className="h-3.5 w-3.5 text-indigo-500" />
+                {connectedFolderName}
+              </Badge>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <input ref={fileInputRef} type="file" accept=".md,.markdown,.txt" className="hidden" onChange={handleImportFile} />
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-1.5" />
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <input ref={fileInputRef} type="file" multiple accept=".md,.markdown,.txt" className="hidden" onChange={handleImportFiles} />
+            
+            {connectedFolderName ? (
+              <Button size="sm" variant="outline" onClick={handleSyncToLocalVault} disabled={isSyncing} className="gap-1.5 text-xs">
+                <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : "text-emerald-500"}`} />
+                {isSyncing ? "Syncing..." : "Sync to Folder"}
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={handleConnectLocalVault} className="gap-1.5 text-xs" title="Open and sync a real local directory on your disk">
+                <FolderOpen className="h-3.5 w-3.5 text-indigo-500" />
+                Link Local Vault
+              </Button>
+            )}
+
+            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="text-xs" title="Import markdown files">
+              <Upload className="h-3.5 w-3.5 mr-1" />
               Import .md
             </Button>
-            <Button size="sm" onClick={handleCreateNote}>
-              <Plus className="h-4 w-4 mr-1.5" />
+            
+            <Button variant="ghost" size="sm" onClick={handleExportAllNotes} className="text-xs hidden lg:flex" title="Download all notes as .md files">
+              <Download className="h-3.5 w-3.5 mr-1" />
+              Export All
+            </Button>
+
+            <Button size="sm" onClick={handleCreateNote} className="text-xs">
+              <Plus className="h-3.5 w-3.5 mr-1" />
               New Note
             </Button>
             <LocalVaultLockButton />
