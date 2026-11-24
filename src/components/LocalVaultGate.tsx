@@ -58,6 +58,10 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    const safetyTimer = window.setTimeout(() => {
+      if (mounted) setChecking(false);
+    }, 2500);
+
     hasEncryptedVault()
       .then(async (exists) => {
         if (mounted) {
@@ -69,8 +73,14 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
         }
       })
       .catch(() => { if (mounted) setError("Secure local storage is unavailable in this browser."); })
-      .finally(() => { if (mounted) setChecking(false); });
-    return () => { mounted = false; };
+      .finally(() => {
+        window.clearTimeout(safetyTimer);
+        if (mounted) setChecking(false);
+      });
+    return () => {
+      mounted = false;
+      window.clearTimeout(safetyTimer);
+    };
   }, []);
 
   const clearUnlockedState = useCallback(() => {
@@ -110,13 +120,10 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
     const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart", "scroll"];
     events.forEach((event) => window.addEventListener(event, refresh, { passive: true }));
     window.addEventListener(LOCAL_VAULT_LOCK_EVENT, lock);
-    const onVisibilityChange = () => { if (document.visibilityState === "hidden") lock(); };
-    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.clearTimeout(timeout);
       events.forEach((event) => window.removeEventListener(event, refresh));
       window.removeEventListener(LOCAL_VAULT_LOCK_EVENT, lock);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [lock, unlocked, idleMinutes]);
 
@@ -153,7 +160,16 @@ export const LocalVaultGate = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  if (checking) return <main className="flex min-h-screen items-center justify-center bg-background" aria-live="polite">Opening secure local storage…</main>;
+  if (checking) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center" aria-live="polite">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm font-medium text-muted-foreground">Initializing secure local storage…</p>
+        </div>
+      </main>
+    );
+  }
   if (unlocked) return <>{children}</>;
 
   return (
