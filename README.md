@@ -1,104 +1,138 @@
-# Remix of Habitflow
+# HabitFlow LifeOS 🌿
 
-🔥 Prompt Title: Responsive Habit Tracker (Calendar Version) — No Data Loss 🔒
+> **A private, local-first, self-hostable personal operating system & habit tracker.**  
+> Keep all your habits, notes, finances, tasks, files, and personal growth on your own device with zero cloud dependencies and client-side AES-GCM encryption.
 
-Context:
-Build a full-stack Flask web app (with SQLite) for daily habit tracking using a visual calendar.
-App should be responsive, mobile-friendly, and store all user data persistently without data loss.
+---
 
-⚙️ Core Features:
-1. Home Page (Calendar View)
-   - Monthly calendar view using JS or FullCalendar.
-   - Each day is color-coded:
-     🟢 Green = All Do’s done & No Don’ts
-     🔴 Red = Any Don’t done or missed task
-     ⚪ Gray = No data or rest day
-   - Click on a date → Opens summary (tasks + journal + points).
+## ✨ Features
 
-2. Task Page (Daily Do’s & Don’ts)
-   - Add/edit/delete your Do’s (positive habits) and Don’ts (bad habits).
-   - Toggle completion for each task daily.
-   - Auto-sync with calendar and points system.
+- 📅 **Habit Tracking & Consistency Heatmaps**
+  - Positive ("Do") and negative ("Don't") habits with streak calculations.
+  - GitHub-style 365-day consistency contribution graph & day-of-week breakdown.
+  - Gamified XP, levels, and milestone badges.
 
-3. Journal Page (Daily Reflection)
-   - Write daily thoughts or reflections.
-   - Each journal entry gives +2 points.
-   - Editable + autosave system (no data loss).
+- 📝 **Markdown Notes Workspace (Obsidian / Notion-like)**
+  - Live preview markdown editor with frontmatter metadata.
+  - Organization tags, pinning, and full-text search.
+  - Import & export notes seamlessly as `.md` or standalone HTML.
 
-4. Analytics Page (Progress Stats)
-   - Weekly/monthly bar chart (Do’s vs Don’ts vs Journal entries).
-   - Total points, streaks, and average performance %.
-   - Motivational quote or progress summary.
+- 💰 **Personal Finance & Investment Trackers**
+  - Income and expense transaction ledger with category breakdowns.
+  - Monthly budget tracking with progress indicators.
+  - Asset portfolio allocation tracker and CSV import/export.
 
-5. Points System 🏆
-   - +4 points per Do’s completed.
-   - +4 points for avoiding Don’ts.
-   - +2 points for journal entry.
-   - Auto-calculated daily & shown in calendar color.
+- 📁 **Inside-Webapp Virtual Filesystem**
+  - Encrypted file attachments and documents stored securely inside IndexedDB.
+  - Filter by file category (Documents, Images, Archives, Data).
+  - Client-side download and preview.
 
-6. Data Safety & Persistence
-   - SQLite local DB (auto create tables if missing).
-   - Flask-Migrate for schema updates.
-   - Auto backup/restore system to avoid loss on reload or crash.
+- 🎯 **LifeOS Productivity Suite**
+  - Daily planner & Eisenhower matrix task management.
+  - Multi-tier goals & milestones.
+  - Private journal, reflective diary, idea cards, and scratchpad.
 
-7. Responsive Design
-   - Use Bootstrap 5 or Tailwind CSS.
-   - Light/Dark mode toggle.
-   - Works on mobile & desktop smoothly.
+- 🧠 **Dual-Engine Private AI Coach**
+  - **Built-in Offline Engine:** Works instantly out-of-the-box with zero external software.
+  - **Optional Ollama Integration:** Connect to your local [Ollama](https://ollama.com/) instance (`http://127.0.0.1:11434`) for private LLM reflections.
 
-8. Bonus (Optional Future Features)
-   - User authentication (login/signup).
-   - Cloud backup (Google Drive / Firebase sync).
-   - Notification/reminder system.
-   - Export reports to CSV/PDF.
-   - “Streak Reminder” Telegram/Email integration.
+- 🔒 **Security & Privacy Hardening**
+  - Passphrase-derived **AES-GCM 256-bit** encrypted vault for all local data.
+  - Non-extractable encryption keys kept only in memory.
+  - Exponential brute-force backoff protection against rapid unlock attempts.
+  - Configurable idle auto-lock timers (5 to 60 minutes).
+  - Emergency Vault Recovery Kit (`.html`) generator.
+  - Zero external network requests (no third-party analytics, fonts, or telemetry).
 
-🗃️ Tech Stack:
-- Backend: Flask + SQLite
-- Frontend: HTML + Tailwind/Bootstrap + JS Calendar (FullCalendar or Vanilla JS)
-- ORM: SQLAlchemy
-- Session: Flask-Login / Secure cookies
-- Charts: Chart.js
-- Optional: Flask-Migrate (for updates)
+- 📱 **Mobile & PWA Ready**
+  - Standalone Progressive Web App (PWA) with offline asset caching.
+  - Installable directly on iOS Safari and Android Chrome.
 
-🧩 Database Tables:
-users(id, username, password, created_at)
-tasks(id, user_id, name, type("do"/"dont"))
-daily_records(id, user_id, date, completed_dos, avoided_donts, journal_text, points)
-analytics_cache(id, user_id, week, month, total_points, avg_score)
+- 🔄 **Cross-Device Sync Merge**
+  - Conflict-free JSON sync merge across 25 local entities.
+  - Sync between your desktop and mobile phone securely without an intermediary server.
 
-🔑 API Keys Required?
-❌ Not mandatory — Works offline using SQLite.
-✅ Optional if you add:
-   - Google OAuth (login/backup)
-   - Telegram Bot (reminders)
-   - Cloud storage (Firebase, Supabase, or Google Drive API)
+---
 
-💡 Final Output Expectation:
-A beautiful, minimal, responsive Flask + SQLite Habit Tracker with:
-- No data loss
-- Calendar dashboard
-- Points-based analytics
-- Journal + Do’s/Don’ts task manager
-- Mobile responsive UI
+## 🚀 Quick Start
 
-This project was built with [Lovable](https://lovable.dev).
+### Option 1: Docker (Recommended for Self-Hosting)
 
-## Build with Lovable
+The fastest way to deploy HabitFlow LifeOS locally or on your home server:
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4ad3e1ee-043d-4c19-a7f9-2e3e53b3586c).
+```bash
+# Clone the repository
+git clone https://github.com/harrysam11/overview.git
+cd overview
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+# Start the container
+docker compose up -d
+```
 
-## Development
+Open your browser and navigate to **`http://localhost:8080`**.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+---
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+### Option 2: Local Development (Node.js)
+
+**Prerequisites:** Node.js 18+ and npm.
+
+```bash
+# 1. Clone repository
+git clone https://github.com/harrysam11/overview.git
+cd overview
+
+# 2. Install dependencies
+npm install
+
+# 3. Start local development server
 npm run dev
 ```
+
+Visit **`http://127.0.0.1:8080`** to access the application.
+
+To create an optimized production build:
+```bash
+npm run build
+npm run preview
+```
+
+---
+
+## 📱 Mobile Installation (PWA)
+
+HabitFlow LifeOS is designed to look and feel like a native mobile app:
+
+1. Open your self-hosted URL (e.g., `http://192.168.1.50:8080` or Tailscale IP) on your phone.
+2. **iOS (Safari):** Tap the **Share** button $\rightarrow$ Select **"Add to Home Screen"**.
+3. **Android (Chrome):** Tap the **Menu (⋮)** $\rightarrow$ Select **"Install App"** or **"Add to Home screen"**.
+4. Launch HabitFlow directly from your home screen. It will open in full-screen standalone mode and function 100% offline.
+
+For detailed self-hosting, reverse proxy (Nginx, Caddy), and LAN/Tailscale instructions, see [SELF_HOSTING.md](SELF_HOSTING.md).
+
+---
+
+## 🧪 Testing & Verification
+
+HabitFlow includes comprehensive Vitest unit tests covering local store operations, crypto encryption/decryption, sync merge conflict resolution, and offline tools:
+
+```bash
+# Run test suite
+npm test
+```
+
+---
+
+## 📜 Architecture & Technology Stack
+
+- **Frontend:** React 18, TypeScript, Vite 5, Tailwind CSS, Radix UI / shadcn
+- **Storage:** Client-side IndexedDB (`idb`) with WebCrypto API (AES-GCM / PBKDF2)
+- **Editor:** TipTap rich-text & Markdown workspace
+- **Charts:** Recharts (Habit heatmaps, financial breakdowns, streak analytics)
+- **Deployment:** Nginx Alpine Docker container & Vite PWA Service Worker
+
+---
+
+## 🛡️ License
+
+This project is open source and available under the [MIT License](LICENSE).
