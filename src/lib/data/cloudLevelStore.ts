@@ -28,19 +28,11 @@ export const cloudLevelStore: LevelStore = {
     return data?.total_xp || 0;
   },
 
-  async addXp(amount: number): Promise<number> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return 0;
-
-    const { error } = await supabase.rpc("increment_xp", { p_amount: amount });
-    if (error) throw error;
-
-    const { data } = await supabase
-      .from("user_levels")
-      .select("total_xp")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    return data?.total_xp || 0;
+  async addXp(_amount: number): Promise<number> {
+    // Never trust XP amounts supplied by a browser. Cloud XP awards remain
+    // disabled until they are issued by a server-authoritative event flow.
+    throw new Error(
+      "Cloud XP awards are disabled until server-authoritative awarding is implemented.",
+    );
   },
 };
