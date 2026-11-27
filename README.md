@@ -65,11 +65,15 @@ The fastest way to deploy HabitFlow LifeOS locally or on your home server:
 git clone https://github.com/harrysam11/overview.git
 cd overview
 
-# Start the container
-docker compose up -d
+# Create your private server login and configure the HTTPS hostname/IP
+chmod +x scripts/setup-self-hosted-auth.sh scripts/start-self-hosted.sh
+./scripts/setup-self-hosted-auth.sh
+
+# Build and start the private HTTPS instance
+./scripts/start-self-hosted.sh
 ```
 
-Open your browser and navigate to **`http://localhost:8080`**.
+Open the HTTPS URL printed by the script (for example, `https://192.168.0.105:8443`). Trust the generated private CA certificate on your own devices first. The server login protects the website; the separate vault passphrase decrypts your browser's personal data. See [SELF_HOSTING.md](SELF_HOSTING.md) for Android certificate installation and remote-access safety.
 
 ---
 
