@@ -1,0 +1,5 @@
+{$HABITFLOW_HOST} {
+    tls internal
+    encode zstd gzip
+    reverse_proxy habitflow:80
+}
