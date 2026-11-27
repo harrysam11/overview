@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { isLocalMode } from "./lib/appMode";
 import { LocalVaultGate } from "./components/LocalVaultGate";
+import { CloudAuthGate } from "./components/CloudAuthGate";
 import Landing from "./pages/Landing";
 import LifeOS from "./pages/LifeOS";
 import NotFound from "./pages/NotFound";
@@ -100,14 +101,16 @@ const App = () => (
           </LocalVaultGate>
         ) : (
           <BrowserRouter>
-            <Suspense fallback={<Loading />}>
-              <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/dashboard" element={<LifeOS />} />
-                {cloudRoutes}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
+            <CloudAuthGate>
+              <Suspense fallback={<Loading />}>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/dashboard" element={<LifeOS />} />
+                  {cloudRoutes}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </CloudAuthGate>
           </BrowserRouter>
         )}
       </TooltipProvider>
