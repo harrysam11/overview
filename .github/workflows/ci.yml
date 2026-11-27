@@ -33,3 +33,9 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Validate self-hosting scripts and Compose
+        run: |
+          bash -n scripts/setup-self-hosted-auth.sh scripts/start-self-hosted.sh
+          docker compose config --quiet
+      - name: Build self-hosted Docker image
+        run: docker build --tag habitflow:self-hosted .
