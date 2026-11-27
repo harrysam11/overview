@@ -18,15 +18,15 @@ grant select, insert, update on table public.encrypted_vaults to authenticated;
 drop policy if exists "Users can read own encrypted vault" on public.encrypted_vaults;
 create policy "Users can read own encrypted vault"
   on public.encrypted_vaults for select to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can create own encrypted vault" on public.encrypted_vaults;
 create policy "Users can create own encrypted vault"
   on public.encrypted_vaults for insert to authenticated
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Users can update own encrypted vault" on public.encrypted_vaults;
 create policy "Users can update own encrypted vault"
   on public.encrypted_vaults for update to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
