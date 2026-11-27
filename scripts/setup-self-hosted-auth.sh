@@ -47,7 +47,10 @@ echo
 echo "Private server login created at: $AUTH_FILE"
 echo "This file contains a SHA-512 crypt password hash. Keep it private and do not commit it."
 
-detected_host="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+detected_host="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}' || true)"
+if [[ -z "$detected_host" ]]; then
+  detected_host="$(hostname -I 2>/dev/null | tr ' ' '\\n' | awk '$1 !~ /^127\\./ && $1 !~ /^172\\./ {print $1; exit}' || true)"
+fi
 detected_host="${detected_host:-localhost}"
 read -r -p "LAN IP or hostname for HTTPS [$detected_host]: " host
 host="${host:-$detected_host}"
