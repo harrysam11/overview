@@ -200,9 +200,17 @@ export const migrateLocalDataToCloud = async (
 
   const userId = authData.user.id;
   const data = backup.data;
+  const cloudWriter = supabase as unknown as {
+    from: (table: string) => {
+      upsert: (
+        rows: Record<string, unknown>[],
+        options: { onConflict: string }
+      ) => Promise<{ error: { message: string } | null }>;
+    };
+  };
   const upsert = async (table: string, rows: Record<string, unknown>[], onConflict = "id") => {
     if (!rows.length) return;
-    const { error } = await (supabase as any).from(table).upsert(rows, { onConflict });
+    const { error } = await cloudWriter.from(table).upsert(rows, { onConflict });
     if (error) throw new Error(`Could not sync ${table}: ${error.message}`);
   };
 
