@@ -25,3 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Self-hosted private credentials and generated local CA certificate
+/secrets/
+/.env
