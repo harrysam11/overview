@@ -49,7 +49,7 @@ echo "This file contains a SHA-512 crypt password hash. Keep it private and do n
 
 detected_host="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}' || true)"
 if [[ -z "$detected_host" ]]; then
-  detected_host="$(hostname -I 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i !~ /^127\\./ && $i !~ /^172\\./ && index($i, ":") == 0) {print $i; exit}}' || true)"
+  detected_host="$(hostname -I 2>/dev/null | awk '{for (i=1; i<=NF; i++) if (index($i, "127.") != 1 && index($i, "172.") != 1 && index($i, ":") == 0) {print $i; exit}}' || true)"
 fi
 detected_host="${detected_host:-localhost}"
 read -r -p "LAN IP or hostname for HTTPS [$detected_host]: " host
