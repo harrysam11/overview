@@ -1,17 +1,45 @@
 # Self-hosting HabitFlow LifeOS (local mode)
 
-Local mode is the default. Habits, check-ins, journal, tasks and projects stay on this computer in an encrypted browser vault; no account or cloud requests are needed.
+Local mode is the default. Habits, check-ins, journal, tasks and projects stay in each browser's encrypted vault; no account or cloud requests are needed. The Docker host serves the application but does not hold a central copy of your personal data.
 
-## Quick Start (Docker / 1-Command)
+## Private single-owner deployment (Docker)
 
-The easiest way to self-host HabitFlow for desktop and mobile devices:
+This deployment has two independent locks:
+
+1. **Server login:** Nginx HTTP Basic Auth, with a SHA-512 password hash stored only in the ignored `secrets/.htpasswd` file.
+2. **Personal vault:** the existing browser-side AES-256-GCM vault, unlocked with your own passphrase. The passphrase is never saved or sent to the server.
+
+Use a separate password for each layer. Do not share the server login.
+
+### Requirements
+
+- Docker Engine and the Docker Compose plugin installed by you on the host.
+- OpenSSL on the host.
+- A stable LAN IP address or local DNS name for the host.
+- No router port forwarding.
+
+### Start
 
 ```bash
-git clone https://github.com/harrysam11/overview.git habitflow && cd habitflow
-docker compose up -d
+git clone https://github.com/harrysam11/overview.git habitflow
+cd habitflow
+chmod +x scripts/setup-self-hosted-auth.sh scripts/start-self-hosted.sh
+./scripts/setup-self-hosted-auth.sh
+./scripts/start-self-hosted.sh
 ```
 
-Open `http://localhost:8080` or `http://<your-server-ip>:8080` from any device on your local network.
+The setup script asks you to create a private server username/password and selects your host's LAN IP (you can change it). The start script builds the app and starts Nginx behind Caddy HTTPS. The only published application port is `8443`.
+
+Open the printed URL, for example `https://192.168.0.105:8443`. The first browser visit requires the private Caddy root CA to be trusted on that device:
+
+- The start script exports `secrets/habitflow-root-ca.crt`.
+- Transfer that public certificate securely to your own device.
+- Install it as a trusted CA certificate in the operating system/browser. On Android, use Settings → Security → Encryption & credentials → Install a certificate → CA certificate (labels vary by device).
+- Reopen the HTTPS URL. The browser will first ask for the server username/password, then HabitFlow will ask you to create or unlock your encrypted-vault passphrase.
+
+The CA certificate is public; its private signing key stays in the Docker `caddy_data` volume. Never delete the Docker volumes or `secrets` directory casually. Keep the server login hash private.
+
+To change the server login, rerun `./scripts/setup-self-hosted-auth.sh` and then `docker compose restart habitflow`. To stop the service, run `docker compose down` from the project directory. This does not delete named volumes. Do not use `docker compose down -v` unless you deliberately intend to delete the Caddy CA data.
 
 ---
 
@@ -37,8 +65,8 @@ npx vite preview --host 0.0.0.0 --port 4173
 HabitFlow is a fully offline **Progressive Web App (PWA)** that runs smoothly on smartphones and tablets.
 
 ### 1. Connecting Your Phone
-- **Home Wi-Fi:** Ensure your phone is on the same Wi-Fi network as your host computer. Open `http://<host-ip>:8080` (or `:4173`) in your phone's browser.
-- **Remote / Anywhere (Tailscale or WireGuard):** Use a free personal mesh VPN like [Tailscale](https://tailscale.com) on your computer and phone to securely access your self-hosted instance from anywhere with zero port forwarding.
+- **Home Wi-Fi:** Ensure your phone is on the same Wi-Fi network as your host computer. Open the private HTTPS URL printed by the start script (for example, `https://192.168.0.105:8443`). Install/trust the private CA certificate first; plain HTTP over a LAN IP is not a secure browser context for WebCrypto.
+- **Remote / Anywhere:** Use a private VPN you control. Do not expose port 8443 to the public internet or configure router port forwarding. Ensure your VPN hostname/IP matches the certificate configured for Caddy.
 
 ### 2. Installing as a Native App
 - **iOS (iPhone/iPad in Safari):**
@@ -88,6 +116,10 @@ Because data is encrypted inside the device's local browser vault:
 
 ## Storage, sync & security features
 
+- **Single-owner server access:** the self-hosted Docker stack requires the private Nginx login before serving the app. It is not an open public signup service.
+- **HTTPS:** Caddy terminates HTTPS using a private local CA. Trust its root certificate on your own devices before using the vault/PWA. The CA private key persists in the `caddy_data` Docker volume.
+- **Two separate credentials:** server access password protects the hosted website; the vault passphrase decrypts the data stored by that browser. These are not the same login system.
+
 - **Storage Eviction & Health:** The app monitors `navigator.storage.persisted()` and available quota. You can request persistent storage directly in `/data`. Proactive backup reminders appear if you have not exported in over a week.
 - **Emergency Vault Recovery Kit:** Download or print a standalone Emergency Vault Recovery Sheet (`.html`) in `/data` or Settings. It records your vault metadata, passphrase hint, instructions, and physical recovery backup.
 - **Passphrase Entropy & Strength Meter:** Visual real-time strength meter (Too Short / Weak / Fair / Strong / Very Strong) with actionable feedback when setting up your vault.
@@ -108,7 +140,7 @@ Because data is encrypted inside the device's local browser vault:
 
 ## Cloud mode (opt-in, legacy)
 
-The legacy online mode is not part of the self-hosting setup. Do not add cloud credentials to a local installation. Local mode never loads cloud-only code.
+The legacy online mode is not part of the private self-hosting setup. Do not add cloud credentials to a local installation. Keep `VITE_DATA_MODE=local`; local mode never loads cloud-only code.
 
 ## Remaining cloud dependencies in the codebase (only used in cloud mode)
 
