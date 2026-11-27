@@ -51,13 +51,31 @@ export const migrateFromCloudAccount = async (
       supabase.from("challenge_participants").select("*").eq("user_id", user.id),
     ]);
 
-    const errors = requests.flatMap((result) => result.error ? [result.error] : []);
-    if (errors.length) throw new Error(`Cloud export failed: ${errors[0].message}`);
-
     const [
-      habits, records, journals, plans, goals, milestones, diaries, diaryTags,
-      categories, cards, scratch, badges, levels, shortcuts, profile, challenges, participants,
-    ] = requests.map((result) => result.data);
+      habitsResult, recordsResult, journalsResult, plansResult, goalsResult, milestonesResult,
+      diariesResult, diaryTagsResult, categoriesResult, cardsResult, scratchResult, badgesResult,
+      levelsResult, shortcutsResult, profileResult, challengesResult, participantsResult,
+    ] = requests;
+    const firstError = requests.find((result) => result.error)?.error;
+    if (firstError) throw new Error(`Cloud export failed: ${firstError.message}`);
+
+    const habits = habitsResult.data;
+    const records = recordsResult.data;
+    const journals = journalsResult.data;
+    const plans = plansResult.data;
+    const goals = goalsResult.data;
+    const milestones = milestonesResult.data;
+    const diaries = diariesResult.data;
+    const diaryTags = diaryTagsResult.data;
+    const categories = categoriesResult.data;
+    const cards = cardsResult.data;
+    const scratch = scratchResult.data;
+    const badges = badgesResult.data;
+    const levels = levelsResult.data;
+    const shortcuts = shortcutsResult.data;
+    const profile = profileResult.data;
+    const challenges = challengesResult.data;
+    const participants = participantsResult.data;
 
     const cloudBackup: LocalBackup = {
       app: BACKUP_APP_ID,
