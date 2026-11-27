@@ -17,6 +17,15 @@ The schema includes profiles, habits/check-ins/journal, planner, goals/milestone
 
 All 29 public tables have RLS enabled (47 policies). Personal records are owner-scoped; social records have participant/member policies. Badge and level definitions are seeded. Client roles cannot directly read or write the rate-limit table. Realtime publication is enabled for direct messages, friend requests, challenge invites, and group messages.
 
+
+## One-time local-vault upload
+
+From local mode, unlock the vault and open **Data & Vault → Sync Local Vault to HabitFlow Cloud**. Sign in to the destination account and confirm the upload. This operation is repeatable and does not delete or modify the encrypted local vault.
+
+It uploads habits, daily check-ins, journal entries, weekly plans, goals/milestones, diary entries/tags, idea categories/cards, scratch pad, shortcuts, solo challenges/participation, and recalculates eligible badges. XP is only increased to the local total; it is never reduced. When the same account already has a check-in or journal entry for the same date key, the local value wins.
+
+Tasks, projects, notes, finance transactions/budgets, investments, stored files, AI preferences, and browser notification preferences remain local-only. They are not silently uploaded. This is a one-time migration, not background bidirectional sync. Once the upload is complete, intentionally switch the Vercel `VITE_DATA_MODE` setting to `cloud` and redeploy to use the cloud stores. Keep a separate encrypted local backup before switching modes.
+
 ## Enable cloud mode
 
 1. In Supabase Dashboard → Authentication → URL Configuration, set Site URL to `https://overview-silk.vercel.app`.
