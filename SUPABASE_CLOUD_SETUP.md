@@ -15,7 +15,7 @@ The initial backend migration is applied to the Supabase project as `habitflow_c
 
 The schema includes profiles, habits/check-ins/journal, planner, goals/milestones, diary and habit tags, ideas, scratch pad, badges/levels, shortcuts, challenges/invites/participants, friend requests, direct/group messaging, notification preferences/subscriptions, habit workspace items, and rate-limit tracking.
 
-All 29 public tables have RLS enabled. Personal records are owner-scoped; social records have participant/member policies. Badge and level definitions are seeded. Client roles cannot directly read or write the rate-limit table.
+All 29 public tables have RLS enabled (47 policies). Personal records are owner-scoped; social records have participant/member policies. Badge and level definitions are seeded. Client roles cannot directly read or write the rate-limit table. Realtime publication is enabled for direct messages, friend requests, challenge invites, and group messages.
 
 ## Enable cloud mode
 
@@ -36,5 +36,5 @@ Changing the Vercel data mode does not automatically upload an existing device's
 - Browser code must use only the Supabase publishable key.
 - Never add a service-role/secret key to `VITE_*` variables or commit one.
 - RLS is enabled on all public tables.
-- Security Advisor reports intentional authenticated execution of 13 narrowly scoped SECURITY DEFINER routines used for RLS-safe membership checks and guarded server-side actions. Their search paths are fixed and execute privileges are explicitly granted to authenticated users only where needed.
+- Security Advisor reports 11 intentional authenticated SECURITY DEFINER routines used for RLS-safe membership checks and guarded server-side actions. Their search paths are fixed; execute privileges are explicitly granted only where the client or RLS policies need them. The friend-graph helper is not directly executable by clients.
 - Re-run Supabase Security and Performance Advisors after schema changes.
