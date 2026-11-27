@@ -53,7 +53,8 @@ import {
   changePassphrase,
   getLastBackupTime,
 } from "@/lib/local/vault";
-import { migrateFromCloudAccount, migrateLocalDataToCloud } from "@/lib/data/cloudMigration";
+import { migrateFromCloudAccount } from "@/lib/data/cloudMigration";
+import { syncEncryptedCloudVault } from "@/lib/data/encryptedCloudVault";
 import { LocalVaultLockButton } from "@/components/LocalVaultLockButton";
 
 export const LocalData = () => {
@@ -91,6 +92,7 @@ export const LocalData = () => {
   const [cloudPushOpen, setCloudPushOpen] = useState(false);
   const [cloudPushBusy, setCloudPushBusy] = useState(false);
   const [cloudPushError, setCloudPushError] = useState("");
+  const [cloudPassphrase, setCloudPassphrase] = useState("");
 
   const refreshMetadata = async () => {
     try {
@@ -270,29 +272,30 @@ export const LocalData = () => {
   const handleLocalToCloudMigration = async () => {
     setCloudPushError("");
     if (!cloudEmail || !cloudPassword) {
-      setCloudPushError("Please enter your cloud email and password.");
+      setCloudPushError("Enter your cloud account email and password.");
+      return;
+    }
+    if (cloudPassphrase.length < 12) {
+      setCloudPushError("Cloud passphrase must be at least 12 characters.");
       return;
     }
     setCloudPushBusy(true);
     try {
-      const result = await migrateLocalDataToCloud({ email: cloudEmail, password: cloudPassword });
+      const result = await syncEncryptedCloudVault(
+        { email: cloudEmail, password: cloudPassword },
+        cloudPassphrase,
+      );
       const c = result.counts;
-      const localOnly = result.localOnly;
       toast({
-        title: "Local data synced to cloud",
-        description: `${c.habits} habits, ${c.records} check-ins, ${c.journal} journal entries, ${c.plans} plans, ${c.goals} goals, and ${c.diary} diary entries uploaded. Your local vault was kept unchanged.`,
+        title: result.restoredRemote ? "Encrypted cloud vault synced" : "Encrypted cloud vault created",
+        description: `Version ${result.version}: ${c.habits} habits, ${c.records} check-ins, ${c.tasks} tasks, ${c.goals} goals and all other supported local records are encrypted before upload.`,
       });
-      if (localOnly.tasks + localOnly.projects + localOnly.notes + localOnly.financeTransactions + localOnly.financeBudgets + localOnly.investmentAssets + localOnly.files > 0) {
-        toast({
-          title: "Some data remains local",
-          description: "Tasks, projects, notes, finance, investments, and files are not cloud-backed and remain on this device.",
-        });
-      }
       setCloudPushOpen(false);
       setCloudEmail("");
       setCloudPassword("");
+      setCloudPassphrase("");
     } catch (e) {
-      setCloudPushError(e instanceof Error ? e.message : "Local-to-cloud migration failed. You can safely retry.");
+      setCloudPushError(e instanceof Error ? e.message : "Encrypted cloud sync failed. Local data was kept unchanged.");
     } finally {
       setCloudPushBusy(false);
     }
@@ -447,7 +450,7 @@ export const LocalData = () => {
               Sync Local Vault to HabitFlow Cloud
             </CardTitle>
             <CardDescription>
-              Explicitly merge supported habits, check-ins, journals, planner, goals, diary, ideas, badges, XP, challenges, and shortcuts into your cloud account. Your encrypted local vault is never deleted.
+              Upload one end-to-end encrypted snapshot of your complete local vault. Supabase stores ciphertext only; your local vault remains unchanged.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -456,7 +459,7 @@ export const LocalData = () => {
               Upload Local Data to Cloud
             </Button>
             <p className="mt-3 text-xs text-muted-foreground">
-              Tasks, projects, notes, finance, investments, and stored files remain local-only. For duplicate check-ins or journal dates, local values replace the matching cloud record.
+              Cloud passphrase is separate from your account password. The same cloud passphrase is required on every device. Losing it means the cloud snapshot cannot be decrypted.
             </p>
           </CardContent>
         </Card>
@@ -638,6 +641,19 @@ export const LocalData = () => {
                 onChange={(e) => setCloudPassword(e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="cloud-vault-passphrase">Cloud encryption passphrase</Label>
+              <Input
+                id="cloud-vault-passphrase"
+                type="password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={1024}
+                value={cloudPassphrase}
+                onChange={(e) => setCloudPassphrase(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Use a strong, unique passphrase of at least 12 characters. It is never sent to Supabase or saved by HabitFlow.</p>
+            </div>
             {cloudPushError && <p className="text-sm text-destructive" role="alert">{cloudPushError}</p>}
           </div>
 
@@ -645,7 +661,7 @@ export const LocalData = () => {
             <Button variant="outline" onClick={() => setCloudPushOpen(false)} disabled={cloudPushBusy}>
               Cancel
             </Button>
-            <Button onClick={handleLocalToCloudMigration} disabled={cloudPushBusy || !cloudEmail || !cloudPassword}>
+            <Button onClick={handleLocalToCloudMigration} disabled={cloudPushBusy || !cloudEmail || !cloudPassword || cloudPassphrase.length < 12}>
               {cloudPushBusy ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />

@@ -1,13 +1,13 @@
 /**
  * App data mode.
- * - "local" (default): all supported data lives in this browser (IndexedDB). The
- *   cloud client is never imported, so no auth, realtime or sync requests happen.
- * - "cloud": legacy hosted backend. Opt-in only via VITE_DATA_MODE=cloud.
+ * Local-first is enforced while the legacy cloud data stores still exist.
+ * Optional cloud access is provided only by encryptedCloudVault.ts; do not
+ * enable the legacy table-backed cloud routes until every store is migrated.
  */
 export type AppMode = "local" | "cloud";
 
-export const resolveAppMode = (raw: unknown): AppMode =>
-  typeof raw === "string" && raw.trim().toLowerCase() === "cloud" ? "cloud" : "local";
+/** Legacy table-backed cloud mode is intentionally disabled to prevent plaintext writes. */
+export const resolveAppMode = (_raw: unknown): AppMode => "local";
 
 export const APP_MODE: AppMode = resolveAppMode(import.meta.env.VITE_DATA_MODE);
 export const isLocalMode = APP_MODE === "local";

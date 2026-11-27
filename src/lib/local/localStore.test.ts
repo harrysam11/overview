@@ -20,11 +20,11 @@ beforeEach(async () => {
 const unlock = () => unlockLocalVault(PASSPHRASE);
 
 describe("app mode", () => {
-  it("defaults to local and only enables cloud when explicitly set", () => {
+  it("keeps legacy table-backed cloud mode disabled", () => {
     expect(resolveAppMode(undefined)).toBe("local");
     expect(resolveAppMode("")).toBe("local");
     expect(resolveAppMode("supabase")).toBe("local");
-    expect(resolveAppMode("cloud")).toBe("cloud");
+    expect(resolveAppMode("cloud")).toBe("local");
   });
 });
 
