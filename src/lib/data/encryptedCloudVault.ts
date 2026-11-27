@@ -14,7 +14,7 @@ const envelopeSchema = z.object({
   format: z.literal("encrypted-cloud-vault"),
   version: z.literal(ENVELOPE_VERSION),
   kdf: z.literal("PBKDF2-SHA256"),
-  iterations: z.number().int().min(310_000).max(2_000_000),
+  iterations: z.literal(KDF_ITERATIONS),
   salt: z.string().min(20).max(64),
   iv: z.string().min(16).max(32),
   ciphertext: z.string().min(1).max(22_000_000),
