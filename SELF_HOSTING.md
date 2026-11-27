@@ -52,11 +52,13 @@ git clone https://github.com/harrysam11/overview.git habitflow && cd habitflow
 npm ci
 npm test          # 44/44 unit tests for local storage and encryption
 npm run build     # outputs production dist/
-npx vite preview --host 0.0.0.0 --port 4173
+npx vite preview --host 127.0.0.1 --port 4173
 ```
 
-- Local-only: `npx vite preview --host 127.0.0.1 --port 4173`
-- Development: `npm run dev` (port 8080)
+- Local-only preview: `npx vite preview --host 127.0.0.1 --port 4173`
+- Development: `npm run dev` (binds to localhost by default)
+
+Do not expose Vite's development/preview server to your LAN or the internet. Use the Docker + Caddy setup above for private HTTPS access from your phone.
 
 ---
 
