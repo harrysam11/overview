@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Self-hosted image is always local-first; cloud mode is opt-in elsewhere.
+ENV VITE_DATA_MODE=local
+
 # Copy dependency manifests
 COPY package.json package-lock.json ./
 
