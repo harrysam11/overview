@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.18"
+    PostgrestVersion: "17.1"
   }
   public: {
     Tables: {
@@ -61,7 +61,7 @@ export type Database = {
           created_at?: string
           description: string
           icon: string
-          id?: string
+          id: string
           name: string
           rarity?: string
           requirement_type: string
@@ -113,20 +113,6 @@ export type Database = {
             referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "challenge_invites_from_user_id_fkey"
-            columns: ["from_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenge_invites_to_user_id_fkey"
-            columns: ["to_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       challenge_participants: {
@@ -157,13 +143,6 @@ export type Database = {
             columns: ["challenge_id"]
             isOneToOne: false
             referencedRelation: "challenges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "challenge_participants_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -205,48 +184,43 @@ export type Database = {
           name?: string
           start_date?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "challenges_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       daily_records: {
         Row: {
-          completed: boolean | null
+          completed: boolean
           created_at: string
           habit_id: string
           id: string
           record_date: string
+          updated_at: string
           user_id: string
         }
         Insert: {
-          completed?: boolean | null
+          completed?: boolean
           created_at?: string
           habit_id: string
           id?: string
           record_date: string
+          updated_at?: string
           user_id: string
         }
         Update: {
-          completed?: boolean | null
+          completed?: boolean
           created_at?: string
           habit_id?: string
           id?: string
           record_date?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "daily_records_habit_id_fkey"
-            columns: ["habit_id"]
+            foreignKeyName: "daily_records_user_id_habit_id_fkey"
+            columns: ["user_id", "habit_id"]
             isOneToOne: false
             referencedRelation: "habits"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -263,7 +237,7 @@ export type Database = {
         Insert: {
           content?: Json
           created_at?: string
-          entry_date?: string
+          entry_date: string
           id?: string
           title?: string | null
           updated_at?: string
@@ -304,11 +278,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "diary_entry_habits_diary_entry_id_fkey"
-            columns: ["diary_entry_id"]
+            foreignKeyName: "diary_entry_habits_user_id_diary_entry_id_fkey"
+            columns: ["user_id", "diary_entry_id"]
             isOneToOne: false
             referencedRelation: "diary_entries"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "diary_entry_habits_user_id_habit_id_fkey"
+            columns: ["user_id", "habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -337,22 +318,7 @@ export type Database = {
           to_user_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "friend_requests_from_user_id_fkey"
-            columns: ["from_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "friend_requests_to_user_id_fkey"
-            columns: ["to_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       goals: {
         Row: {
@@ -420,13 +386,6 @@ export type Database = {
             referencedRelation: "groups"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       group_messages: {
@@ -459,13 +418,6 @@ export type Database = {
             referencedRelation: "groups"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "group_messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       groups: {
@@ -493,15 +445,7 @@ export type Database = {
           id?: string
           name?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "groups_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       habit_workspace_items: {
         Row: {
@@ -546,34 +490,45 @@ export type Database = {
           url?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "habit_workspace_items_user_id_habit_id_fkey"
+            columns: ["user_id", "habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
       }
       habits: {
         Row: {
           created_at: string
           id: string
-          is_active: boolean | null
+          is_active: boolean
           name: string
           notes: string | null
           type: string
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           name: string
           notes?: string | null
           type: string
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           name?: string
           notes?: string | null
           type?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -611,11 +566,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "idea_cards_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: "idea_cards_user_id_category_id_fkey"
+            columns: ["user_id", "category_id"]
             isOneToOne: false
             referencedRelation: "idea_categories"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -656,7 +611,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          content: string
+          content?: string
           created_at?: string
           entry_date: string
           id?: string
@@ -719,22 +674,7 @@ export type Database = {
           receiver_id?: string
           sender_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_receiver_id_fkey"
-            columns: ["receiver_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       milestones: {
         Row: {
@@ -766,11 +706,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "milestones_goal_id_fkey"
-            columns: ["goal_id"]
+            foreignKeyName: "milestones_user_id_goal_id_fkey"
+            columns: ["user_id", "goal_id"]
             isOneToOne: false
             referencedRelation: "goals"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -804,7 +744,6 @@ export type Database = {
           created_at: string
           endpoint: string
           id: string
-          p256dh_key: string
           user_id: string
         }
         Insert: {
@@ -812,7 +751,6 @@ export type Database = {
           created_at?: string
           endpoint: string
           id?: string
-          p256dh_key: string
           user_id: string
         }
         Update: {
@@ -820,7 +758,6 @@ export type Database = {
           created_at?: string
           endpoint?: string
           id?: string
-          p256dh_key?: string
           user_id?: string
         }
         Relationships: []
@@ -831,7 +768,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
-          is_searchable: boolean | null
+          is_searchable: boolean
           username: string | null
         }
         Insert: {
@@ -839,7 +776,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
-          is_searchable?: boolean | null
+          is_searchable?: boolean
           username?: string | null
         }
         Update: {
@@ -847,7 +784,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
-          is_searchable?: boolean | null
+          is_searchable?: boolean
           username?: string | null
         }
         Relationships: []
