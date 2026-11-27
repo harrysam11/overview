@@ -36,7 +36,7 @@ while true; do
   echo "Passwords do not match. Try again."
 done
 
-hash="$(printf '%s' "$password" | openssl passwd -apr1 -stdin)"
+hash="$(printf '%s' "$password" | openssl passwd -6 -stdin)"
 unset password confirmation
 tmp_file="$(mktemp "$SECRETS_DIR/.htpasswd.XXXXXX")"
 printf '%s:%s\n' "$username" "$hash" > "$tmp_file"
@@ -45,5 +45,27 @@ mv -f "$tmp_file" "$AUTH_FILE"
 
 echo
 echo "Private server login created at: $AUTH_FILE"
-echo "This file contains a one-way password hash. Keep it private and do not commit it."
+echo "This file contains a SHA-512 crypt password hash. Keep it private and do not commit it."
+
+detected_host="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+detected_host="${detected_host:-localhost}"
+read -r -p "LAN IP or hostname for HTTPS [$detected_host]: " host
+host="${host:-$detected_host}"
+if [[ ! "$host" =~ ^[A-Za-z0-9.-]+$ ]]; then
+  echo "Use an IPv4 address or DNS hostname without scheme, path, or port." >&2
+  exit 1
+fi
+
+if [[ -f "$ROOT_DIR/.env" ]]; then
+  if grep -q '^HABITFLOW_HOST=' "$ROOT_DIR/.env"; then
+    sed -i "s/^HABITFLOW_HOST=.*/HABITFLOW_HOST=$host/" "$ROOT_DIR/.env"
+  else
+    printf '\nHABITFLOW_HOST=%s\n' "$host" >> "$ROOT_DIR/.env"
+  fi
+else
+  printf 'HABITFLOW_HOST=%s\n' "$host" > "$ROOT_DIR/.env"
+fi
+chmod 600 "$ROOT_DIR/.env"
+
+echo "HTTPS host saved in .env: $host"
 echo "Next: run ./scripts/start-self-hosted.sh"
