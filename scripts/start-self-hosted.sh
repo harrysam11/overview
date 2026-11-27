@@ -29,6 +29,12 @@ fi
 host="$(sed -n 's/^HABITFLOW_HOST=//p' .env | tail -n 1)"
 docker compose up -d --build
 
+# Trigger Caddy's first certificate issuance before exporting its public root CA.
+if command -v curl >/dev/null 2>&1; then
+  curl --insecure --silent --show-error --output /dev/null --max-time 10 "https://${host}:8443/" || true
+fi
+sleep 2
+
 echo
 echo "HabitFlow is running behind HTTPS and a private server login."
 echo "Open: https://${host}:8443"
