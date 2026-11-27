@@ -28,51 +28,41 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       headers: getLocalSecurityHeaders(false),
     },
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: "autoUpdate",
-      devOptions: {
-        enabled: false,
+    plugins: [
+      react(),
+      VitePWA({
+        registerType: "autoUpdate",
+        injectRegister: "auto",
+        devOptions: {
+          enabled: false,
+        },
+        workbox: {
+          navigateFallbackDenylist: [/^\/~oauth/],
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        },
+        manifest: {
+          id: "/",
+          name: "HabitFlow LifeOS",
+          short_name: "HabitFlow",
+          description: "Track your daily habits, journal your progress, and build streaks.",
+          theme_color: "#0a0a0a",
+          background_color: "#0a0a0a",
+          display: "standalone",
+          orientation: "portrait-primary",
+          scope: "/",
+          start_url: "/",
+          icons: [
+            { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+            { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
+            { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          ],
+        },
+      }),
+    ],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
-      workbox: {
-        navigateFallbackDenylist: [/^\/~oauth/],
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-      },
-      manifest: {
-        name: "HabitFlow - Daily Habit Tracker",
-        short_name: "HabitFlow",
-        description: "Track your daily habits, journal your progress, and build streaks.",
-        theme_color: "#0a0a0a",
-        background_color: "#0a0a0a",
-        display: "standalone",
-        orientation: "portrait-primary",
-        scope: "/",
-        start_url: "/",
-        icons: [
-          {
-            src: "/pwa-192x192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
-          {
-            src: "/pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
-            purpose: "maskable",
-          },
-        ],
-      },
-    }),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
     },
-  },
-}; });
+  };
+});
