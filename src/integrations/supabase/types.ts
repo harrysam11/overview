@@ -14,6 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      encrypted_vaults: {
+        Row: { user_id: string; payload: Json; version: number; updated_at: string }
+        Insert: { user_id: string; payload: Json; version?: number; updated_at?: string }
+        Update: { user_id?: string; payload?: Json; version?: number; updated_at?: string }
+        Relationships: []
+      }
       app_shortcuts: {
         Row: {
           created_at: string
