@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   KeyRound,
   CloudDownload,
+  CloudUpload,
   Layers,
   RefreshCw,
   HardDrive,
@@ -52,7 +53,7 @@ import {
   changePassphrase,
   getLastBackupTime,
 } from "@/lib/local/vault";
-import { migrateFromCloudAccount } from "@/lib/data/cloudMigration";
+import { migrateFromCloudAccount, migrateLocalDataToCloud } from "@/lib/data/cloudMigration";
 import { LocalVaultLockButton } from "@/components/LocalVaultLockButton";
 
 export const LocalData = () => {
@@ -87,6 +88,9 @@ export const LocalData = () => {
   const [cloudPassword, setCloudPassword] = useState("");
   const [cloudMigrateBusy, setCloudMigrateBusy] = useState(false);
   const [cloudMigrateError, setCloudMigrateError] = useState("");
+  const [cloudPushOpen, setCloudPushOpen] = useState(false);
+  const [cloudPushBusy, setCloudPushBusy] = useState(false);
+  const [cloudPushError, setCloudPushError] = useState("");
 
   const refreshMetadata = async () => {
     try {
@@ -262,6 +266,38 @@ export const LocalData = () => {
     }
   };
 
+
+  const handleLocalToCloudMigration = async () => {
+    setCloudPushError("");
+    if (!cloudEmail || !cloudPassword) {
+      setCloudPushError("Please enter your cloud email and password.");
+      return;
+    }
+    setCloudPushBusy(true);
+    try {
+      const result = await migrateLocalDataToCloud({ email: cloudEmail, password: cloudPassword });
+      const c = result.counts;
+      const localOnly = result.localOnly;
+      toast({
+        title: "Local data synced to cloud",
+        description: `${c.habits} habits, ${c.records} check-ins, ${c.journal} journal entries, ${c.plans} plans, ${c.goals} goals, and ${c.diary} diary entries uploaded. Your local vault was kept unchanged.`,
+      });
+      if (localOnly.tasks + localOnly.projects + localOnly.notes + localOnly.financeTransactions + localOnly.financeBudgets + localOnly.investmentAssets + localOnly.files > 0) {
+        toast({
+          title: "Some data remains local",
+          description: "Tasks, projects, notes, finance, investments, and files are not cloud-backed and remain on this device.",
+        });
+      }
+      setCloudPushOpen(false);
+      setCloudEmail("");
+      setCloudPassword("");
+    } catch (e) {
+      setCloudPushError(e instanceof Error ? e.message : "Local-to-cloud migration failed. You can safely retry.");
+    } finally {
+      setCloudPushBusy(false);
+    }
+  };
+
   const counts = pending ? backupCounts(pending) : null;
 
   return (
@@ -402,6 +438,29 @@ export const LocalData = () => {
           </CardContent>
         </Card>
 
+
+        {/* Local to Cloud Migration */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CloudUpload className="h-5 w-5 text-primary" />
+              Sync Local Vault to HabitFlow Cloud
+            </CardTitle>
+            <CardDescription>
+              Explicitly merge supported habits, check-ins, journals, planner, goals, diary, ideas, badges, XP, challenges, and shortcuts into your cloud account. Your encrypted local vault is never deleted.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => { setCloudPushError(""); setCloudPushOpen(true); }}>
+              <CloudUpload className="mr-2 h-4 w-4" />
+              Upload Local Data to Cloud
+            </Button>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Tasks, projects, notes, finance, investments, and stored files remain local-only. For duplicate check-ins or journal dates, local values replace the matching cloud record.
+            </p>
+          </CardContent>
+        </Card>
+
         {/* Cloud Migration Card */}
         <Card className="border-indigo-500/20 bg-indigo-50/10">
           <CardHeader>
@@ -536,6 +595,65 @@ export const LocalData = () => {
             <Button variant="outline" onClick={() => setChangePassOpen(false)}>Cancel</Button>
             <Button onClick={handleChangePassphrase} disabled={busy || newPassphrase.length < 12}>
               Update Passphrase
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+      {/* Local to Cloud Migration Modal */}
+      <Dialog open={cloudPushOpen} onOpenChange={(open) => {
+        if (!cloudPushBusy) {
+          setCloudPushOpen(open);
+          if (!open) setCloudPushError("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Local Vault to Cloud</DialogTitle>
+            <DialogDescription>
+              Sign in to the cloud account that should receive this data. Supported records are merged using their existing IDs and date keys. If a check-in or journal entry already exists for the same date, the local version wins. Nothing is deleted from this device; this operation can be safely retried if interrupted.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="cloud-push-email">Cloud Email</Label>
+              <Input
+                id="cloud-push-email"
+                type="email"
+                autoComplete="username"
+                value={cloudEmail}
+                onChange={(e) => setCloudEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cloud-push-password">Cloud Password</Label>
+              <Input
+                id="cloud-push-password"
+                type="password"
+                autoComplete="current-password"
+                value={cloudPassword}
+                onChange={(e) => setCloudPassword(e.target.value)}
+              />
+            </div>
+            {cloudPushError && <p className="text-sm text-destructive" role="alert">{cloudPushError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloudPushOpen(false)} disabled={cloudPushBusy}>
+              Cancel
+            </Button>
+            <Button onClick={handleLocalToCloudMigration} disabled={cloudPushBusy || !cloudEmail || !cloudPassword}>
+              {cloudPushBusy ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading data…
+                </>
+              ) : (
+                "Confirm & Upload"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
